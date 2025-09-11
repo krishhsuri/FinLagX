@@ -1,0 +1,61 @@
+equities:
+  - name: yahoo_us_markets
+    url: https://feeds.finance.yahoo.com/rss/2.0/headline?s=^GSPC,^NDX,^DJI
+  - name: marketwatch_stocks
+    url: https://feeds.marketwatch.com/marketwatch/topstories/
+  - name: seekingalpha_equities
+    url: https://seekingalpha.com/feed.xml
+  - name: investing_equities
+    url: https://www.investing.com/rss/news_25.rss
+
+commodities:
+  - name: investing_commodities
+    url: https://www.investing.com/rss/news_3.rss
+  - name: financialjuice_commodities
+    url: https://www.financialjuice.com/rss/commodities
+  - name: kitco_gold
+    url: https://www.kitco.com/rss/feed.xml
+  - name: oilprice
+    url: https://oilprice.com/rss/main
+
+forex:
+  - name: investing_fx
+    url: https://www.investing.com/rss/news_1.rss
+  - name: fxstreet
+    url: https://www.fxstreet.com/rss
+  - name: dailyfx
+    url: https://www.dailyfx.com/feeds/market-news
+
+bonds:
+  - name: investing_bonds
+    url: https://www.investing.com/rss/news_22.rss
+  - name: marketwatch_bonds
+    url: https://feeds.marketwatch.com/marketwatch/bonds/
+
+emerging:
+  - name: economictimes_em
+    url: https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms
+  - name: moneycontrol_em
+    url: https://www.moneycontrol.com/rss/marketreports.xml
+  - name: investing_em
+    url: https://www.investing.com/rss/news_15.rss
+
+crypto:
+  - name: coindesk
+    url: https://www.coindesk.com/arc/outboundfeeds/rss/
+  - name: cointelegraph
+    url: https://cointelegraph.com/rss
+  - name: decrypt
+    url: https://decrypt.co/feed
+  - name: bitcoin_magazine
+    url: https://bitcoinmagazine.com/.rss/full/
+  - name: newsbtc
+    url: https://www.newsbtc.com/feed/
+
+macro:
+  - name: imf_news
+    url: https://www.imf.org/en/News/rss
+  - name: worldbank_blogs
+    url: https://blogs.worldbank.org/feed
+  - name: tradingeconomics_news
+    url: https://tradingeconomics.com/rss/news

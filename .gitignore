@@ -1,0 +1,15 @@
+/data/
+!src/data/
+*.parquet
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env
+.idea/
+.vscode/
+*.swp
+*.swo

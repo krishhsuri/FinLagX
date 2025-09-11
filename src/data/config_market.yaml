@@ -1,0 +1,33 @@
+start_date: "2010-01-01"
+
+equities:
+  SP500: "^GSPC"
+  NASDAQ100: "^NDX"
+  DOWJONES: "^DJI"
+  NIKKEI225: "^N225"
+  FTSE100: "^FTSE"
+  DAX40: "^GDAXI"
+  NIFTY50: "^NSEI"
+
+commodities:
+  CRUDE_OIL: "CL=F"
+  GOLD: "GC=F"
+  COPPER: "HG=F"
+  SILVER: "SI=F"
+
+fx:
+  USDJPY: "JPY=X"
+  EURUSD: "EURUSD=X"
+  GBPUSD: "GBPUSD=X"
+  USDCNY: "CNY=X"
+
+vol_bonds:
+  VIX: "^VIX"
+  US10Y: "^TNX"
+
+emerging:
+  MSCI_EM: "EEM"
+  BOVESPA: "^BVSP"
+
+crypto:
+  BITCOIN: "BTC-USD"

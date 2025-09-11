@@ -1,0 +1,8 @@
+start_date: "2010-01-01"
+
+macro:
+  CPI: "CPIAUCSL"        # Consumer Price Index
+  GDP: "GDP"             # Gross Domestic Product
+  UNEMPLOYMENT: "UNRATE" # Unemployment Rate
+  FEDFUNDS: "FEDFUNDS"   # Fed Funds Rate
+  US10Y_YIELD: "DGS10"   # 10-Year Treasury Rate
