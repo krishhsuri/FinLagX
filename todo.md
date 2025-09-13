@@ -22,4 +22,3 @@ create api passes for fred and tradingeconomics find how to use newspapers3k or 
                  -> exploratory data analysis
                  -> transformers (huggingface)
 6) streamlit basic financial dashboard 
-7) granger and var models 
