@@ -24,7 +24,7 @@ def download_asset(ticker: str, name: str, category: str, start: str, end: str):
         os.makedirs(category_dir, exist_ok=True)
 
         file_path = os.path.join(category_dir, f"{name}.csv")
-        df.to_csv(file_path, index=True) # THIS HAS BEEN CORRECTED
+        df.to_csv(file_path, index=True)  # FIX IS HERE
         print(f"✅ Saved {name} -> {file_path}")
         return df
     except Exception as e:

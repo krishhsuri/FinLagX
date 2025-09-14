@@ -1,0 +1,10 @@
+Your preprocessing pipeline now:
+Loads raw market data.
+Handles missing values.
+Converts numeric columns.
+Calculates daily returns & volatility.
+Detects outliers.
+Generates visual insights (line plots, candlesticks, distribution, heatmap).
+Normalizes numeric columns.
+Saves cleaned data and visualizations.
+
