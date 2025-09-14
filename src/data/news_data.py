@@ -35,8 +35,8 @@ def save_articles(category, source_name, articles):
     folder = os.path.join(BASE_PATH, category, source_name)
     os.makedirs(folder, exist_ok=True)
 
-    file_path = os.path.join(folder, f"{source_name}_{date_str}.parquet")
-    pd.DataFrame(articles).to_parquet(file_path, index=False)
+    file_path = os.path.join(folder, f"{source_name}_{date_str}.csv")
+    pd.DataFrame(articles).to_csv(file_path, index=False)
     print(f"✅ Saved {len(articles)} articles -> {file_path}")
 
 def download_all_news():

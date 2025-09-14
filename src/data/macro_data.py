@@ -21,8 +21,8 @@ def download_macro_indicator(code: str, name: str, start: str, end: str):
         if df.empty:
             print(f"⚠️ No data for {name} ({code})")
             return None
-        file_path = os.path.join(DATA_DIR, f"{name}.parquet")
-        df.to_parquet(file_path)
+        file_path = os.path.join(DATA_DIR, f"{name}.csv")
+        df.to_csv(file_path)
         print(f"✅ Saved {name} -> {file_path}")
         return df
     except Exception as e:
