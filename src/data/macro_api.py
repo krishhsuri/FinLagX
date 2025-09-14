@@ -20,7 +20,7 @@ def fetch_fred_series(series_id, name):
     data = resp.json()["observations"]
 
     df = pd.DataFrame(data)
-    df.to_parquet(os.path.join(BASE_PATH, f"{name}_{datetime.today().strftime('%Y-%m-%d')}.parquet"))
+    df.to_csv(os.path.join(BASE_PATH, f"{name}_{datetime.today().strftime('%Y-%m-%d')}.csv"))
     print(f"✅ Saved macro series {name} -> {BASE_PATH}")
 
 def run_macro_api():
