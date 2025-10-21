@@ -1,12 +1,12 @@
 # FinLagX Project Plan
 
-**Last Updated:** October 8, 2025
+**Last Updated:** October 21, 2025
 
 ---
 
-## 🎯 Current Phase: Feature Engineering & Dashboard
+## 🎯 Current Phase: Model Integration & Visualization
 
-The project has successfully completed the initial data ingestion and modeling phases. The immediate focus is on enriching the data with sentiment analysis and presenting the findings in a user-friendly dashboard.
+The project has successfully completed all data collection and feature engineering phases, including sentiment analysis. The immediate focus is on integrating this new sentiment feature into the models and presenting the final results in a user-friendly dashboard.
 
 ---
 
@@ -19,31 +19,33 @@ The project has successfully completed the initial data ingestion and modeling p
 -   [x] **Deep Learning Modeling**: Implemented `PyTorch` LSTM for time-series forecasting.
 -   [x] **Experiment Tracking**: Integrated `MLflow` for tracking and visualizing model performance.
 -   [x] **Version Control**: Modeling work has been pushed to the `modelingdev` branch on GitHub.
+-   [x] **Sentiment Analysis**: Implemented `FinBERT` pipeline to generate and store sentiment scores for news articles.
 
 ---
 
 ## ⏳ Next Steps & To-Do
 
-### 1. **Implement FinBERT for Sentiment Analysis**
+### 1. **Build Final Feature Dataset (Evening Task)**
     - **Priority**: High
-    - **Task**: Create a new script (`src/preprocessing/generate_sentiment.py`) to:
-        - Fetch news articles from MongoDB that have not been analyzed.
-        - Use a pre-trained `FinBERT` model from Hugging Face to generate sentiment scores.
-        - Update the MongoDB articles with their sentiment scores.
-    - **Goal**: Add sentiment as a core feature for the modeling pipelines.
+    - **Task**: Re-implement and run the `src/preprocessing/build_features.py` script to:
+        - Fetch market data from TimescaleDB.
+        - Fetch news articles and their new sentiment scores from MongoDB.
+        - Align and merge these two datasets on a daily basis.
+        - Save the final, feature-rich dataset to `data/processed/market/aligned_market_data.parquet`.
+    - **Goal**: Create the final, unified dataset required for the modeling phase.
 
-### 2. **Integrate Sentiment into Models**
-    - **Priority**: Medium
-    - **Task**: Update the preprocessing and modeling scripts to include the new sentiment scores as an input feature.
-    - **Goal**: Re-run the `statsmodels` and `PyTorch` models to see if sentiment improves predictive accuracy.
+### 2. **Re-run Models with Sentiment Data**
+    - **Priority**: High
+    - **Task**: After the feature dataset is built, re-run the `market_modeling.py` and `pytorch_modeling.py` scripts.
+    - **Goal**: Analyze the impact of the new sentiment feature on model performance and generate updated results (graphs, metrics in MLflow).
 
 ### 3. **Develop the Streamlit Dashboard**
-    - **Priority**: High
+    - **Priority**: Medium
     - **Task**: Begin development of the `Streamlit` dashboard to visualize project outputs.
     - **Initial Features**:
         - Display the lead-lag dependency graph from the `statsmodels` analysis.
         - Show the `PyTorch` model's predictions vs. actuals chart.
-        - Create interactive charts for exploring the raw market and macro data.
+        - Create interactive charts for exploring the raw market and macro data, including news sentiment.
 
 ---
 
