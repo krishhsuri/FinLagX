@@ -1,9 +1,9 @@
 import os
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, date
 import yaml
 import yfinance as yf
-from sqlalchemy import create_engine
+from sqlalchemy import text
 from src.data_storage.database_setup import get_engine
 import logging
 
@@ -19,86 +19,125 @@ START_DATE = config["start_date"]
 
 def download_asset_to_db(ticker: str, name: str, category: str, start: str, end: str, engine):
     try:
-        # Download data with progress=False to avoid warnings
+        # Download data
+        logger.info(f"Downloading {name} ({ticker})...")
         df = yf.download(ticker, start=start, end=end, progress=False, auto_adjust=False)
+        
         if df.empty:
             logger.warning(f"No data for {name} ({ticker})")
             return None
         
-        # Handle multi-level columns if they exist
+        # Handle multi-level columns
         if isinstance(df.columns, pd.MultiIndex):
-            # Flatten multi-level columns
-            df.columns = df.columns.get_level_values(1)
+            df.columns = df.columns.get_level_values(0)
         
+        # Reset index
         df = df.reset_index()
+        
+        # Add metadata
         df['symbol'] = name
         df['category'] = category
         
-        # Handle different column names that yfinance might return
-        column_mapping = {}
+        # Rename columns
+        column_mapping = {
+            'Date': 'time',
+            'Open': 'open_price',
+            'High': 'high_price',
+            'Low': 'low_price',
+            'Close': 'close_price',
+            'Volume': 'volume'
+        }
         
-        # Map Date column
-        if 'Date' in df.columns:
-            column_mapping['Date'] = 'time'
-        elif 'Datetime' in df.columns:
-            column_mapping['Datetime'] = 'time'
-        
-        # Map OHLCV columns
-        if 'Open' in df.columns:
-            column_mapping['Open'] = 'open_price'
-        if 'High' in df.columns:
-            column_mapping['High'] = 'high_price'
-        if 'Low' in df.columns:
-            column_mapping['Low'] = 'low_price'
-        if 'Close' in df.columns:
-            column_mapping['Close'] = 'close_price'
-        if 'Volume' in df.columns:
-            column_mapping['Volume'] = 'volume'
-        
-        # Handle Adj Close - it might not exist for all tickers
         if 'Adj Close' in df.columns:
             column_mapping['Adj Close'] = 'adj_close'
         else:
-            # Use Close as adj_close if no Adj Close available
-            df['adj_close'] = df.get('Close', 0)
-            logger.info(f"⚠️ No Adj Close data for {name}, using Close price")
+            df['adj_close'] = df['Close']
         
         df = df.rename(columns=column_mapping)
         
-        # Ensure we have all required columns
-        required_columns = ['time', 'symbol', 'category', 'open_price', 'high_price',
-                          'low_price', 'close_price', 'adj_close', 'volume']
+        # Ensure correct column order
+        df = df[['time', 'symbol', 'category', 'open_price', 'high_price', 
+                 'low_price', 'close_price', 'adj_close', 'volume']]
         
-        # Add missing columns with default values
-        for col in required_columns:
-            if col not in df.columns:
-                if col == 'volume':
-                    df[col] = 0  # Default volume to 0
-                elif col in ['open_price', 'high_price', 'low_price', 'close_price', 'adj_close']:
-                    df[col] = df.get('close_price', 0)  # Use close price as fallback
-                else:
-                    df[col] = None
+        # Convert data types explicitly
+        df['time'] = pd.to_datetime(df['time'])
+        df['symbol'] = df['symbol'].astype(str)
+        df['category'] = df['category'].astype(str)
         
-        df = df[required_columns]
+        # Convert numeric columns
+        numeric_cols = ['open_price', 'high_price', 'low_price', 'close_price', 'adj_close', 'volume']
+        for col in numeric_cols:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
         
-        # Remove any rows with NaN values in critical columns
-        df = df.dropna(subset=['time', 'symbol', 'category'])
+        # Drop rows with NaN in critical columns
+        df = df.dropna(subset=['time', 'close_price'])
         
-        if not df.empty:
-            df.to_sql('market_data', engine, if_exists='append', index=False, method='multi')
-            logger.info(f"✅ Saved {len(df)} rows for {name} to database")
-            return df
-        else:
+        # Fill remaining NaN
+        df = df.fillna(method='ffill').fillna(0)
+        
+        if df.empty:
             logger.warning(f"No valid data after cleaning for {name}")
             return None
+        
+        # Insert using raw SQL with ON CONFLICT to handle duplicates properly
+        inserted_count = 0
+        updated_count = 0
+        
+        with engine.connect() as conn:
+            for _, row in df.iterrows():
+                try:
+                    # Use INSERT ... ON CONFLICT UPDATE to handle duplicates
+                    sql = text("""
+                        INSERT INTO market_data 
+                        (time, symbol, category, open_price, high_price, low_price, 
+                         close_price, adj_close, volume)
+                        VALUES 
+                        (:time, :symbol, :category, :open_price, :high_price, :low_price,
+                         :close_price, :adj_close, :volume)
+                        ON CONFLICT (time, symbol) 
+                        DO UPDATE SET
+                            open_price = EXCLUDED.open_price,
+                            high_price = EXCLUDED.high_price,
+                            low_price = EXCLUDED.low_price,
+                            close_price = EXCLUDED.close_price,
+                            adj_close = EXCLUDED.adj_close,
+                            volume = EXCLUDED.volume
+                    """)
+                    
+                    conn.execute(sql, {
+                        'time': row['time'],
+                        'symbol': row['symbol'],
+                        'category': row['category'],
+                        'open_price': float(row['open_price']),
+                        'high_price': float(row['high_price']),
+                        'low_price': float(row['low_price']),
+                        'close_price': float(row['close_price']),
+                        'adj_close': float(row['adj_close']),
+                        'volume': int(row['volume'])
+                    })
+                    inserted_count += 1
+                    
+                except Exception as e:
+                    logger.error(f"Error inserting row for {name} at {row['time']}: {e}")
+                    continue
             
+            conn.commit()
+        
+        logger.info(f"✅ Processed {inserted_count} rows for {name}")
+        return df
+        
     except Exception as e:
         logger.error(f"❌ Failed {name} ({ticker}): {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 def download_all_assets():
     engine = get_engine()
-    end_date = datetime.today().strftime("%Y-%m-%d")
+    end_date = date.today().isoformat()
+    
+    logger.info(f"📅 Downloading from {START_DATE} to {end_date}\n")
+    
     for category, assets in config.items():
         if category == "start_date":
             continue
@@ -127,7 +166,6 @@ def get_latest_data(symbol=None, category=None, limit=100):
     
     return pd.read_sql(query, engine, params=params)
 
-
 def get_price_data_range(symbol, start_date, end_date):
     engine = get_engine()
     query = """
@@ -144,11 +182,20 @@ def get_price_data_range(symbol, start_date, end_date):
     })
 
 if __name__ == "__main__":
-    logger.info("🚀 Starting Market Data Pipeline with TimescaleDB...\n")
+    logger.info("🚀 Starting Market Data Pipeline...\n")
     download_all_assets()
+    
     logger.info("\n📊 Testing data retrieval...")
     recent_data = get_latest_data(limit=5)
     logger.info(f"Recent data shape: {recent_data.shape}")
+    
     if not recent_data.empty:
-        print(recent_data[['time', 'symbol', 'close_price']].head())
+        print("\n" + "="*80)
+        print("LATEST DATA SAMPLE:")
+        print("="*80)
+        print(recent_data[['time', 'symbol', 'close_price', 'volume']].head())
+        print("="*80)
+    else:
+        logger.warning("⚠️ No data retrieved from database!")
+    
     logger.info("\n✅ Market data pipeline completed!")

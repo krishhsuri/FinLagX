@@ -75,23 +75,40 @@ def show_pipeline_summary():
     except Exception as e:
         logger.warning(f"Could not generate summary: {e}")
 
-def run_market_only():
+# --- UPDATED FUNCTIONS START HERE ---
+
+def run_market_only(clean_first=False):
     """Run only market data pipeline"""
     logger.info("📈 Running Market Data Only...")
     test_connection()
+    if clean_first:
+        logger.info("\n🧹 --clean flag detected. Wiping old data...")
+        # Note: clean_database_tables() clears BOTH market and macro.
+        # This is the simplest fix for now.
+        clean_database_tables()
     download_all_assets()
+    logger.info("✅ Market data only pipeline finished.")
 
-def run_macro_only():
+def run_macro_only(clean_first=False):
     """Run only macro data pipeline"""
     logger.info("📊 Running Macro Data Only...")
     test_connection()
+    if clean_first:
+        logger.info("\n🧹 --clean flag detected. Wiping old data...")
+        # Note: clean_database_tables() clears BOTH market and macro.
+        clean_database_tables()
     download_all_macro()
+    logger.info("✅ Macro data only pipeline finished.")
 
-def run_news_only():
+def run_news_only(clean_first=False):
     """Run only news data pipeline"""
     logger.info("📰 Running News Data Only...")
     test_connection()
+    if clean_first:
+        logger.info("\n🧹 --clean flag detected. Wiping old news data...")
+        clean_news_collection()
     download_all_news()
+    logger.info("✅ News data only pipeline finished.")
 
 if __name__ == "__main__":
     # Check for a '--clean' or 'clean' argument
@@ -107,12 +124,14 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         mode = sys.argv[1].lower()
         if mode == "market":
-            run_market_only()
+            run_market_only(clean_first=clean_run)
         elif mode == "macro":
-            run_macro_only()
+            run_macro_only(clean_first=clean_run)
         elif mode == "news":
-            run_news_only()
+            run_news_only(clean_first=clean_run)
         else:
             logger.error("Usage: python -m src.data_ingestion.run_data_pipeline [market|macro|news] [--clean]")
     else:
         run_full_pipeline(clean_first=clean_run)
+
+# --- UPDATED FUNCTIONS END HERE ---

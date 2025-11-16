@@ -32,6 +32,7 @@ services:
     ports:
       - "27017:27017"
     volumes:
+      - mongo_data:/data/db
       - "./init-scripts:/docker-entrypoint-initdb.d"
     networks:
       - finlagx_network
@@ -41,6 +42,36 @@ services:
       timeout: 5s
       retries: 5
 
+  # MLflow Tracking Server with PostgreSQL backend
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.18.0
+    container_name: finlagx_mlflow
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-finlagx_password}@timescaledb:5432/${MLFLOW_DB:-mlflow}
+      - MLFLOW_ARTIFACT_ROOT=/mlflow/artifacts
+      - MLFLOW_SERVE_ARTIFACTS=true
+    volumes:
+      - mlflow_artifacts:/mlflow/artifacts
+    networks:
+      - finlagx_network
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    command: >
+      mlflow server
+      --backend-store-uri postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-finlagx_password}@timescaledb:5432/${MLFLOW_DB:-mlflow}
+      --default-artifact-root /mlflow/artifacts
+      --host 0.0.0.0
+      --port 5000
+      --serve-artifacts
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -60,7 +91,6 @@ services:
       timescaledb:
         condition: service_healthy
 
-
   mongo-express:
     image: mongo-express:latest
     container_name: finlagx_mongo_express
@@ -78,7 +108,6 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
-
 
   redis:
     image: redis:7-alpine
@@ -100,6 +129,8 @@ volumes:
   pgadmin_data:
     driver: local
   redis_data:
+    driver: local
+  mlflow_artifacts:
     driver: local
 
 networks:

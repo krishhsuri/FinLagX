@@ -80,9 +80,9 @@ def setup_database():
     """Setup database schema"""
     print("🗄️ Setting up database schema...")
     try:
-        from src.data_storage.database_setup import create_database, setup_timescaledb, test_connection
+        from src.data_storage.database_setup import setup_timescaledb, test_connection
 
-        create_database()
+        
         setup_timescaledb()
         test_connection()
         print("✅ Database setup completed")
