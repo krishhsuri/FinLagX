@@ -91,11 +91,28 @@ def check_tables():
         
         if tables:
             print(f"✅ Found {len(tables)} tables:")
+            # Hypertables such as var_features can hold many chunks; counting them
+            # requires grabbing locks on every chunk and can exhaust shared memory.
+            heavy_tables = {"var_features"}
+            
             for table in tables:
-                # Get row count
-                count_result = conn.execute(text(f"SELECT COUNT(*) FROM {table}"))
-                count = count_result.fetchone()[0]
-                print(f"   • {table}: {count:,} rows")
+                try:
+                    if table in heavy_tables:
+                        estimate_sql = text("""
+                            SELECT reltuples::bigint 
+                            FROM pg_class 
+                            WHERE relname = :table_name
+                        """)
+                        estimate = conn.execute(estimate_sql, {"table_name": table}).scalar()
+                        count_display = f"~{estimate:,} (estimate)"
+                    else:
+                        count_result = conn.execute(text(f"SELECT COUNT(*) FROM {table}"))
+                        count = count_result.fetchone()[0]
+                        count_display = f"{count:,}"
+                    
+                    print(f"   • {table}: {count_display} rows")
+                except Exception as e:
+                    print(f"   • {table}: ⚠️ count unavailable ({e})")
         else:
             print("⚠️ No tables found in database")
     
