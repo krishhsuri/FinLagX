@@ -82,15 +82,15 @@ class MarketDataPreprocessor:
         return df
     
     def calculate_returns(self, df):
-        """Calculate only log returns (better for time series)"""
+        """Calculate log returns at multiple horizons"""
         logger.info("📊 Calculating returns...")
         
         df = df.copy()
         
-        # Log returns (more stable, better for modeling)
-        df['returns'] = df.groupby('symbol')['close_price'].transform(
-            lambda x: np.log(x / x.shift(1))
-        )
+        grouped = df.groupby('symbol')['close_price']
+        df['returns'] = grouped.transform(lambda x: np.log(x / x.shift(1)))
+        df['return_5d'] = grouped.transform(lambda x: np.log(x / x.shift(5)))
+        df['return_10d'] = grouped.transform(lambda x: np.log(x / x.shift(10)))
         
         logger.info("✅ Returns calculated")
         
@@ -107,14 +107,19 @@ class MarketDataPreprocessor:
         
         df = df.copy()
         
-        # 20-day rolling volatility (most important for risk)
+        # 20-day rolling volatility (require full window)
         df['volatility_20'] = df.groupby('symbol')['returns'].transform(
-            lambda x: x.rolling(window=20, min_periods=5).std()
+            lambda x: x.rolling(window=20, min_periods=20).std()
         )
         
         # 20-day simple moving average (trend indicator)
         df['sma_20'] = df.groupby('symbol')['close_price'].transform(
-            lambda x: x.rolling(window=20, min_periods=5).mean()
+            lambda x: x.rolling(window=20, min_periods=20).mean()
+        )
+        
+        # 50-day simple moving average (slower trend)
+        df['sma_50'] = df.groupby('symbol')['close_price'].transform(
+            lambda x: x.rolling(window=50, min_periods=50).mean()
         )
         
         # Volume change (interest/activity indicator)

@@ -7,7 +7,6 @@ services:
       POSTGRES_DB: ${DB_NAME:-finlagx}
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-finlagx_password}
-      POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "5432:5432"
     volumes:
@@ -21,28 +20,7 @@ services:
       timeout: 5s
       retries: 5
 
-  mongodb:
-    image: mongo:7
-    container_name: finlagx_mongodb
-    restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-finlagx_mongo}
-      MONGO_INITDB_DATABASE: ${MONGO_DB:-finlagx_news}
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-      - "./init-scripts:/docker-entrypoint-initdb.d"
-    networks:
-      - finlagx_network
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # MLflow Tracking Server with PostgreSQL backend
+  # MLflow Tracking Server
   mlflow:
     image: ghcr.io/mlflow/mlflow:v2.18.0
     container_name: finlagx_mlflow
@@ -50,9 +28,8 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - MLFLOW_BACKEND_STORE_URI=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-finlagx_password}@timescaledb:5432/${MLFLOW_DB:-mlflow}
-      - MLFLOW_ARTIFACT_ROOT=/mlflow/artifacts
-      - MLFLOW_SERVE_ARTIFACTS=true
+      MLFLOW_BACKEND_STORE_URI: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-finlagx_password}@timescaledb:5432/mlflow
+      MLFLOW_ARTIFACT_ROOT: /mlflow/artifacts
     volumes:
       - mlflow_artifacts:/mlflow/artifacts
     networks:
@@ -61,18 +38,25 @@ services:
       timescaledb:
         condition: service_healthy
     command: >
+      sh -c "
+      echo 'Ensuring psycopg2 is available for PostgreSQL connections...' &&
+      pip install --no-cache-dir psycopg2-binary &&
+      echo 'Waiting for database to be ready...' &&
+      sleep 10 &&
       mlflow server
-      --backend-store-uri postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-finlagx_password}@timescaledb:5432/${MLFLOW_DB:-mlflow}
+      --backend-store-uri postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-finlagx_password}@timescaledb:5432/mlflow
       --default-artifact-root /mlflow/artifacts
       --host 0.0.0.0
       --port 5000
-      --serve-artifacts
+      "
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
+      retries: 5
+      start_period: 40s
 
+  # PgAdmin for database management
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: finlagx_pgadmin
@@ -91,24 +75,7 @@ services:
       timescaledb:
         condition: service_healthy
 
-  mongo-express:
-    image: mongo-express:latest
-    container_name: finlagx_mongo_express
-    restart: unless-stopped
-    environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
-      ME_CONFIG_MONGODB_ADMINPASSWORD: finlagx_mongo
-      ME_CONFIG_MONGODB_URL: mongodb://admin:finlagx_mongo@mongodb:27017/
-      ME_CONFIG_BASICAUTH_USERNAME: admin
-      ME_CONFIG_BASICAUTH_PASSWORD: admin123
-    ports:
-      - "8081:8081"
-    networks:
-      - finlagx_network
-    depends_on:
-      mongodb:
-        condition: service_healthy
-
+  # Redis for caching (useful for future real-time features)
   redis:
     image: redis:7-alpine
     container_name: finlagx_redis
@@ -123,8 +90,6 @@ services:
 
 volumes:
   timescale_data:
-    driver: local
-  mongo_data:
     driver: local
   pgadmin_data:
     driver: local

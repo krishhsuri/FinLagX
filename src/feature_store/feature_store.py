@@ -27,33 +27,6 @@ class FeatureStore:
         logger.info("🏗️ Initializing Feature Store...")
         
         with self.engine.connect() as conn:
-            # 1. Base features table (from preprocessing)
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS market_features (
-                    time TIMESTAMPTZ NOT NULL,
-                    symbol VARCHAR(20) NOT NULL,
-                    returns NUMERIC,
-                    volatility_20 NUMERIC,
-                    sma_20 NUMERIC,
-                    volume_change NUMERIC,
-                    news_equities NUMERIC DEFAULT 0,
-                    news_commodities NUMERIC DEFAULT 0,
-                    news_forex NUMERIC DEFAULT 0,
-                    news_crypto NUMERIC DEFAULT 0,
-                    news_bonds NUMERIC DEFAULT 0,
-                    created_at TIMESTAMPTZ DEFAULT NOW(),
-                    PRIMARY KEY (time, symbol)
-                );
-            """))
-            
-            # Make it a hypertable if not already
-            try:
-                conn.execute(text("SELECT create_hypertable('market_features', 'time', if_not_exists => TRUE);"))
-            except:
-                pass
-            
-            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_market_features_symbol ON market_features(symbol, time DESC);"))
-            
             # 2. Granger causality results
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS granger_results (
@@ -110,20 +83,6 @@ class FeatureStore:
             except:
                 pass
             
-            # 5. Sentiment features
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS sentiment_features (
-                    date DATE NOT NULL,
-                    category VARCHAR(50) NOT NULL,
-                    avg_sentiment NUMERIC,
-                    article_count INT,
-                    positive_count INT,
-                    negative_count INT,
-                    neutral_count INT,
-                    created_at TIMESTAMPTZ DEFAULT NOW(),
-                    PRIMARY KEY (date, category)
-                );
-            """))
             
             conn.commit()
         
@@ -136,45 +95,56 @@ class FeatureStore:
         logger.info(f"💾 Saving base features...")
         
         try:
-            # Select relevant columns
-            feature_cols = ['time', 'symbol', 'returns', 'volatility_20', 'sma_20', 'volume_change']
-            news_cols = [col for col in df.columns if 'news_' in col]
+            base_feature_cols = [
+                'time',
+                'symbol',
+                'returns',
+                'return_5d',
+                'return_10d',
+                'volatility_20',
+                'sma_20',
+                'sma_50',
+                'volume_change'
+            ]
+            available_cols = [col for col in base_feature_cols if col in df.columns]
+            missing_cols = set(base_feature_cols) - set(available_cols)
+            if missing_cols:
+                logger.warning(f"⚠️ Missing columns in preprocessed data: {missing_cols}")
             
-            features_df = df[feature_cols + news_cols].copy()
+            news_cols = [col for col in df.columns if col.startswith('news_')]
+            if news_cols:
+                logger.info(f"   Including news features: {news_cols}")
             
-            # Upsert to database
+            feature_cols = available_cols + news_cols
+            if not feature_cols:
+                logger.error("❌ No usable columns found for market_features insert")
+                return
+            
+            features_df = df[feature_cols].copy()
+            
+            insert_cols = ", ".join(feature_cols)
+            value_cols = ", ".join([f":{col}" for col in feature_cols])
+            update_cols = ", ".join([f"{col} = EXCLUDED.{col}" for col in feature_cols if col not in ('time', 'symbol')])
+            
+            insert_sql = f"""
+                INSERT INTO market_features ({insert_cols})
+                VALUES ({value_cols})
+                ON CONFLICT (time, symbol) DO UPDATE SET
+                {update_cols}
+            """
+            
             with self.engine.connect() as conn:
                 for _, row in features_df.iterrows():
-                    conn.execute(text("""
-                        INSERT INTO market_features 
-                        (time, symbol, returns, volatility_20, sma_20, volume_change, 
-                         news_equities, news_commodities, news_forex, news_crypto, news_bonds)
-                        VALUES 
-                        (:time, :symbol, :returns, :volatility_20, :sma_20, :volume_change,
-                         :news_equities, :news_commodities, :news_forex, :news_crypto, :news_bonds)
-                        ON CONFLICT (time, symbol) DO UPDATE SET
-                            returns = EXCLUDED.returns,
-                            volatility_20 = EXCLUDED.volatility_20,
-                            sma_20 = EXCLUDED.sma_20,
-                            volume_change = EXCLUDED.volume_change,
-                            news_equities = EXCLUDED.news_equities,
-                            news_commodities = EXCLUDED.news_commodities,
-                            news_forex = EXCLUDED.news_forex,
-                            news_crypto = EXCLUDED.news_crypto,
-                            news_bonds = EXCLUDED.news_bonds
-                    """), {
-                        'time': row['time'],
-                        'symbol': row['symbol'],
-                        'returns': float(row.get('returns', 0)),
-                        'volatility_20': float(row.get('volatility_20', 0)),
-                        'sma_20': float(row.get('sma_20', 0)),
-                        'volume_change': float(row.get('volume_change', 0)),
-                        'news_equities': int(row.get('news_equities', 0)),
-                        'news_commodities': int(row.get('news_commodities', 0)),
-                        'news_forex': int(row.get('news_forex', 0)),
-                        'news_crypto': int(row.get('news_crypto', 0)),
-                        'news_bonds': int(row.get('news_bonds', 0))
-                    })
+                    params = {}
+                    for col in feature_cols:
+                        value = row[col]
+                        if pd.isna(value):
+                            params[col] = None
+                        elif col in ('returns', 'return_5d', 'return_10d', 'volatility_20', 'sma_20', 'sma_50', 'volume_change'):
+                            params[col] = float(value)
+                        else:
+                            params[col] = value
+                    conn.execute(text(insert_sql), params)
                 
                 conn.commit()
             

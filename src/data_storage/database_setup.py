@@ -4,30 +4,18 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 import pandas as pd
 from dotenv import load_dotenv
-from pymongo import MongoClient
 
-# --- Load Environment Variables ---
-# This line MUST be at the top to load your .env file
+# Load Environment Variables
 load_dotenv()
 
-# --- TimescaleDB Configuration ---
+# TimescaleDB Configuration
 DB_CONFIG = {
     'host': os.getenv('DB_HOST', 'localhost'),
     'port': os.getenv('DB_PORT', '5432'),
     'database': os.getenv('DB_NAME', 'finlagx'),
-    'user': os.getenv('DB_USER', 'finlagx'), # CORRECTED: Default is now 'finlagx'
+    'user': os.getenv('DB_USER', 'postgres'),
     'password': os.getenv('DB_PASSWORD', 'finlagx_password')
 }
-
-# --- MongoDB Configuration ---
-MONGO_CONFIG = {
-    'host': os.getenv('MONGO_HOST', 'localhost'),
-    'port': int(os.getenv('MONGO_PORT', '27017')),
-    'username': os.getenv('MONGO_USER', 'admin'),
-    'password': os.getenv('MONGO_PASSWORD', 'finlagx_mongo'),
-    'database': os.getenv('MONGO_DB', 'finlagx_news')
-}
-
 
 def get_db_url():
     """Generate PostgreSQL connection URL"""
@@ -36,86 +24,145 @@ def get_db_url():
         f"{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
     )
 
-def setup_timescaledb():
-    """Install TimescaleDB extension and create hypertables"""
-    engine = create_engine(get_db_url())
-    try:
-        with engine.connect() as conn:
-            conn.execute(text("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"))
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS market_data (
-                    time TIMESTAMPTZ NOT NULL, symbol VARCHAR(20) NOT NULL, category VARCHAR(20) NOT NULL,
-                    open_price DECIMAL(15,4), high_price DECIMAL(15,4), low_price DECIMAL(15,4),
-                    close_price DECIMAL(15,4), adj_close DECIMAL(15,4), volume BIGINT,
-                    PRIMARY KEY (time, symbol)
-                );
-            """))
-            conn.execute(text("SELECT create_hypertable('market_data', 'time', if_not_exists => TRUE);"))
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS macro_data (
-                    time TIMESTAMPTZ NOT NULL, indicator VARCHAR(50) NOT NULL, value DECIMAL(15,6),
-                    PRIMARY KEY (time, indicator)
-                );
-            """))
-            conn.execute(text("SELECT create_hypertable('macro_data', 'time', if_not_exists => TRUE);"))
-            conn.commit()
-            print("✅ TimescaleDB schema created successfully.")
-    except Exception as e:
-        if "already exists" not in str(e):
-             print(f"❌ Error setting up TimescaleDB: {e}")
-        else:
-            print("✅ TimescaleDB schema already exists.")
-
+def get_mlflow_db_url():
+    """Generate MLflow PostgreSQL connection URL"""
+    return (
+        f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@"
+        f"{DB_CONFIG['host']}:{DB_CONFIG['port']}/mlflow"
+    )
 
 def get_engine():
-    """Get SQLAlchemy engine for database operations"""
+    """Get SQLAlchemy engine for main database operations"""
     return create_engine(get_db_url())
 
+def get_mlflow_engine():
+    """Get SQLAlchemy engine for MLflow database"""
+    return create_engine(get_mlflow_db_url())
+
 def test_connection():
-    """Test all database connections."""
+    """Test database connections."""
     print("\n--- Testing Database Connections ---")
-    # Test TimescaleDB/PostgreSQL
+    
+    # Test main TimescaleDB
     try:
         engine = get_engine()
         with engine.connect() as conn:
             result = conn.execute(text("SELECT version();"))
             version = result.fetchone()[0]
-            print(f"✅ Connected to PostgreSQL: {version.split(',')[0]}")
+            print(f"✅ Connected to FinLagX DB: {version.split(',')[0]}")
+            
+            # Check for TimescaleDB extension
+            result = conn.execute(text("SELECT extname FROM pg_extension WHERE extname = 'timescaledb';"))
+            if result.fetchone():
+                print(f"✅ TimescaleDB extension is installed")
+            else:
+                print(f"⚠️ TimescaleDB extension not found")
     except Exception as e:
-        print(f"❌ PostgreSQL Connection Failed: {e}")
+        print(f"❌ FinLagX Database Connection Failed: {e}")
         raise
-
-    # Test MongoDB
+    
+    # Test MLflow database
     try:
-        client = MongoClient(
-            host=MONGO_CONFIG['host'], port=MONGO_CONFIG['port'],
-            username=MONGO_CONFIG['username'], password=MONGO_CONFIG['password'],
-            authSource='admin', serverSelectionTimeoutMS=5000
-        )
-        client.admin.command('ismaster')
-        print(f"✅ Connected to MongoDB: {client.server_info()['version']}")
-        client.close()
+        mlflow_engine = get_mlflow_engine()
+        with mlflow_engine.connect() as conn:
+            result = conn.execute(text("SELECT version();"))
+            print(f"✅ Connected to MLflow DB")
     except Exception as e:
-        print(f"❌ MongoDB Connection Failed: {e}")
-        raise
+        print(f"⚠️ MLflow Database not ready (will be created by MLflow): {e}")
+    
     print("------------------------------------")
 
+def check_tables():
+    """Check which tables exist in the database"""
+    engine = get_engine()
+    
+    print("\n--- Checking Database Tables ---")
+    
+    with engine.connect() as conn:
+        # Get all tables
+        result = conn.execute(text("""
+            SELECT tablename 
+            FROM pg_tables 
+            WHERE schemaname = 'public'
+            ORDER BY tablename;
+        """))
+        
+        tables = [row[0] for row in result]
+        
+        if tables:
+            print(f"✅ Found {len(tables)} tables:")
+            for table in tables:
+                # Get row count
+                count_result = conn.execute(text(f"SELECT COUNT(*) FROM {table}"))
+                count = count_result.fetchone()[0]
+                print(f"   • {table}: {count:,} rows")
+        else:
+            print("⚠️ No tables found in database")
+    
+    print("------------------------------------")
 
-def clean_database_tables():
-    """Truncate all data from market and macro tables."""
+def clean_raw_data():
+    """Truncate raw data tables (market_data, macro_data)"""
     engine = get_engine()
     try:
         with engine.connect() as conn:
-            conn.execute(text("TRUNCATE TABLE market_data, macro_data RESTART IDENTITY CASCADE;"))
+            conn.execute(text("TRUNCATE TABLE market_data RESTART IDENTITY CASCADE;"))
+            conn.execute(text("TRUNCATE TABLE macro_data RESTART IDENTITY CASCADE;"))
             conn.commit()
-            print("🧹 Cleaned all market and macro data from TimescaleDB.")
+            print("🧹 Cleaned raw data tables (market_data, macro_data)")
     except Exception as e:
-        print(f"❌ Error cleaning TimescaleDB tables: {e}")
+        print(f"❌ Error cleaning raw data: {e}")
+
+def clean_processed_features():
+    """Truncate processed feature tables"""
+    engine = get_engine()
+    
+    feature_tables = [
+        'market_features',
+        'granger_results', 
+        'var_features',
+        'lstm_predictions'
+    ]
+    
+    try:
+        with engine.connect() as conn:
+            for table in feature_tables:
+                try:
+                    conn.execute(text(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE;"))
+                    print(f"🧹 Cleaned {table}")
+                except Exception as e:
+                    print(f"⚠️ Could not clean {table}: {e}")
+            conn.commit()
+            print("✅ Cleaned all processed feature tables")
+    except Exception as e:
+        print(f"❌ Error cleaning processed features: {e}")
+
+def clean_all_data():
+    """Clean both raw and processed data"""
+    print("\n🧹 Cleaning ALL data from database...")
+    clean_raw_data()
+    clean_processed_features()
+    print("✅ All data cleaned\n")
+
+def init_feature_store():
+    """Initialize feature store tables if they don't exist"""
+    from src.feature_store import FeatureStore
+    
+    print("\n🏗️ Initializing Feature Store...")
+    fs = FeatureStore()
+    fs.initialize_feature_store()
+    print("✅ Feature Store ready\n")
 
 if __name__ == "__main__":
-    print("🚀 Setting up FinLagX Databases...")
-    # Note: Database creation is handled by docker-compose.
-    # This script now only sets up tables and extensions.
-    setup_timescaledb()
+    print("🚀 FinLagX Database Setup")
+    
+    # Test connection
     test_connection()
+    
+    # Check tables
+    check_tables()
+    
+    # Initialize feature store
+    init_feature_store()
+    
     print("\n✅ Database setup completed!")
