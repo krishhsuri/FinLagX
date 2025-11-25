@@ -27,6 +27,32 @@ class FeatureStore:
         logger.info("🏗️ Initializing Feature Store...")
         
         with self.engine.connect() as conn:
+            # 1. Market features (base features from preprocessing)
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS market_features (
+                    time TIMESTAMPTZ NOT NULL,
+                    symbol VARCHAR(20) NOT NULL,
+                    returns NUMERIC,
+                    return_5d NUMERIC,
+                    return_10d NUMERIC,
+                    volatility_20 NUMERIC,
+                    sma_20 NUMERIC,
+                    sma_50 NUMERIC,
+                    created_at TIMESTAMPTZ DEFAULT NOW(),
+                    PRIMARY KEY (time, symbol)
+                );
+            """))
+            
+            # Convert to hypertable for time-series optimization
+            try:
+                conn.execute(text("SELECT create_hypertable('market_features', 'time', if_not_exists => TRUE);"))
+            except:
+                pass  # Already a hypertable
+            
+            # Create indices for better query performance
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_market_features_symbol ON market_features(symbol);"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_market_features_time ON market_features(time DESC);"))
+            
             # 2. Granger causality results
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS granger_results (
@@ -103,8 +129,7 @@ class FeatureStore:
                 'return_10d',
                 'volatility_20',
                 'sma_20',
-                'sma_50',
-                'volume_change'
+                'sma_50'
             ]
             available_cols = [col for col in base_feature_cols if col in df.columns]
             missing_cols = set(base_feature_cols) - set(available_cols)
@@ -140,7 +165,7 @@ class FeatureStore:
                         value = row[col]
                         if pd.isna(value):
                             params[col] = None
-                        elif col in ('returns', 'return_5d', 'return_10d', 'volatility_20', 'sma_20', 'sma_50', 'volume_change'):
+                        elif col in ('returns', 'return_5d', 'return_10d', 'volatility_20', 'sma_20', 'sma_50'):
                             params[col] = float(value)
                         else:
                             params[col] = value
@@ -416,4 +441,3 @@ if __name__ == "__main__":
     logger.info("   • granger_results - Causality scores")
     logger.info("   • var_features - VAR model outputs")
     logger.info("   • lstm_predictions - LSTM predictions")
-    logger.info("   • sentiment_features - Sentiment scores")
