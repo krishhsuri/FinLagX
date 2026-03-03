@@ -1,0 +1,103 @@
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: finlagx_timescaledb
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-finlagx}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-finlagx_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+      - "./init-scripts:/docker-entrypoint-initdb.d"
+    networks:
+      - finlagx_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d finlagx"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MLflow Tracking Server
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.18.0
+    container_name: finlagx_mlflow
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      MLFLOW_BACKEND_STORE_URI: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-finlagx_password}@timescaledb:5432/mlflow
+      MLFLOW_ARTIFACT_ROOT: /mlflow/artifacts
+    volumes:
+      - mlflow_artifacts:/mlflow/artifacts
+    networks:
+      - finlagx_network
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    command: >
+      sh -c "
+      echo 'Ensuring psycopg2 is available for PostgreSQL connections...' &&
+      pip install --no-cache-dir psycopg2-binary &&
+      echo 'Waiting for database to be ready...' &&
+      sleep 10 &&
+      mlflow server
+      --backend-store-uri postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-finlagx_password}@timescaledb:5432/mlflow
+      --default-artifact-root /mlflow/artifacts
+      --host 0.0.0.0
+      --port 5000
+      "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # PgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: finlagx_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@finlagx.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - finlagx_network
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+
+  # Redis for caching (useful for future real-time features)
+  redis:
+    image: redis:7-alpine
+    container_name: finlagx_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - finlagx_network
+    command: redis-server --appendonly yes
+
+volumes:
+  timescale_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+  redis_data:
+    driver: local
+  mlflow_artifacts:
+    driver: local
+
+networks:
+  finlagx_network:
+    driver: bridge
