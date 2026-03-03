@@ -25,14 +25,16 @@
 
     ## ⏳ Next Steps & To-Do
 
-    ### 1. **Build Final Feature Dataset (Evening Task)**
-        - **Priority**: High
-        - **Task**: Re-implement and run the `src/preprocessing/build_features.py` script to:
-            - Fetch market data from TimescaleDB.
-            - Fetch news articles and their new sentiment scores from MongoDB.
-            - Align and merge these two datasets on a daily basis.
-            - Save the final, feature-rich dataset to `data/processed/market/aligned_market_data.parquet`.
-        - **Goal**: Create the final, unified dataset required for the modeling phase.
+    ### 1. ~~**Build Final Feature Dataset (Evening Task)**~~ ✅ COMPLETED (March 3, 2026)
+        - **Priority**: ~~High~~ → Done
+        - **Task**: Re-implemented `src/preprocessing/build_features.py`:
+            - ✅ Fetches market data from TimescaleDB (via MarketDataPreprocessor).
+            - ✅ Fetches news articles and their FinBERT sentiment scores from MongoDB.
+            - ✅ Aggregates daily sentiment (mean, std, min, max, count per category).
+            - ✅ Aligns and merges market + sentiment on a daily basis (left join).
+            - ✅ Adds derived features (SMA crossover, volatility regime, return sign).
+            - ✅ Saves the final feature-rich dataset to `data/processed/market/aligned_market_data.parquet`.
+        - **Result**: Pipeline produces a unified dataset ready for the modeling phase.
 
     ### 2. **Re-run Models with Sentiment Data**
         - **Priority**: High

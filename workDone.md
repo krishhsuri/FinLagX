@@ -42,3 +42,38 @@ Today's session focused on implementing the final feature engineering pipeline u
 - The dataset is fully enriched with market data, macroeconomic indicators, and news sentiment scores.
 - The `todo.md` file has been updated to reflect the current project status.
 - **Next Task (Evening)**: Re-implement the `src/preprocessing/build_features.py` script to merge sentiment scores with market data, creating the final dataset for model integration.
+
+---
+
+## Date: March 3, 2026
+
+---
+
+## Key Achievement: Build Features Pipeline — Final Feature Dataset
+
+Today's session focused on implementing the final Build Features pipeline (`src/preprocessing/build_features.py`) which creates the unified, feature-rich dataset required by the modeling phase.
+
+---
+
+## 🔧 **Task 1: Build Features Pipeline Implementation**
+
+- **Status:**   **Completed**
+- **Details:**
+  - Created `src/preprocessing/build_features.py` — a comprehensive 6-step pipeline:
+    1. **Fetch Market Data** from TimescaleDB via `MarketDataPreprocessor` (OHLCV, returns, volatility, SMAs).
+    2. **Fetch News Sentiment** from MongoDB — extracts articles with FinBERT sentiment scores.
+    3. **Aggregate Daily Sentiment** — computes per-category daily stats (mean, std, min, max, article count).
+    4. **Align & Merge** — left-joins market data with daily sentiment on calendar date, filling missing days with zeros.
+    5. **Derived Features** — adds price_vs_sma20, price_vs_sma50, sma_crossover, vol_regime, return_sign.
+    6. **Save to Parquet** — outputs the final dataset to `data/processed/market/aligned_market_data.parquet` with gzip compression.
+  - The pipeline gracefully handles scenarios where MongoDB is unavailable (proceeds with market-only features).
+  - Updated `src/preprocessing/__init__.py` to export the new module.
+  - CLI support with `--symbols`, `--start-date`, `--end-date` flags.
+
+---
+
+## 📊 **Overall Project Status & Next Steps Planned**
+
+- **TODO Part 1 (Build Final Feature Dataset)** is now complete ✅
+- Updated `todo.md` to reflect completion.
+- **Next Task**: Re-run models with the new sentiment-enriched dataset (TODO Part 2).
