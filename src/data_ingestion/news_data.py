@@ -1,6 +1,9 @@
 # src/data_ingestion/news_data.py
 
+import sys
 import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+
 import yaml
 import feedparser
 import pandas as pd
@@ -303,6 +306,64 @@ def clean_news_collection():
         print(f"  Error cleaning MongoDB collection: {e}")
 
 
+def process_sentiment_batch(limit=500):
+    """Process articles missing sentiment scores using FinBERT"""
+    articles = get_articles_for_sentiment_analysis(limit=limit)
+    if not articles:
+        logger.info("✅ No new articles need sentiment analysis.")
+        return 0
+        
+    logger.info(f"🧠 Loading FinBERT model to process {len(articles)} articles...")
+    try:
+        # Import lazily so basic RSS fetching doesn't require massive ML libraries
+        from transformers import pipeline
+        import torch
+        
+        device = 0 if torch.cuda.is_available() else -1
+        pipe = pipeline("text-classification", model="ProsusAI/finbert", device=device)
+    except ImportError:
+        logger.error("❌ Need 'transformers' and 'torch' installed to run sentiment analysis.")
+        logger.error("Run: pip install transformers torch")
+        return 0
+    except Exception as e:
+        logger.error(f"❌ Failed to load FinBERT model: {e}")
+        return 0
+
+    processed_count = 0
+    for idx, article in enumerate(articles):
+        # Combine title and summary for better context
+        text = f"{article.get('title', '')}. {article.get('summary', '')}"
+        text = clean_text(text, 512)  # FinBERT takes max 512 tokens (~chars for safety here)
+        
+        if len(text.strip()) < 10:
+            update_sentiment_analysis(article['_id'], 0.0) # Assume neutral if empty
+            continue
+            
+        try:
+            result = pipe(text)[0]
+            label = result['label']
+            
+            # Convert classification to continuous score [-1.0 to 1.0]
+            if label == 'positive':
+                score = result['score']  # e.g., 0.95
+            elif label == 'negative':
+                score = -result['score'] # e.g., -0.92
+            else:
+                score = 0.0              # neutral
+                
+            update_sentiment_analysis(article['_id'], float(score))
+            processed_count += 1
+            
+            if processed_count % 50 == 0:
+                logger.info(f"  Processed {processed_count}/{len(articles)} articles...")
+                
+        except Exception as e:
+            logger.error(f"  Error processing article {article['_id']}: {e}")
+            
+    logger.info(f"✅ Finished sentiment analysis for {processed_count} articles.")
+    return processed_count
+
+
 if __name__ == "__main__":
     logger.info("  Starting News Data Pipeline with MongoDB...\n")
 
@@ -317,6 +378,10 @@ if __name__ == "__main__":
 
     # Download all news
     download_all_news()
+    
+    # Process sentiment using FinBERT
+    logger.info("\n🧠 Starting sentiment extraction...")
+    process_sentiment_batch(limit=1000)
 
     # Test queries
     logger.info("\n📊 Testing data retrieval...")

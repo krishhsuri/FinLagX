@@ -2,7 +2,7 @@
 
 ## Overview
 
-**TCN** (Temporal Convolutional Network) is an advanced deep learning architecture specifically designed for sequence modeling. Unlike LSTMs, TCNs use **dilated causal convolutions** to capture long-range temporal dependencies while maintaining computational efficiency.
+**TCN** (Temporal Convolutional Network) is an advanced deep learning architecture specifically designed for sequence modeling. Unlike LSTMs, TCNs use **dilated causal convolutions** to capture long-range temporal dependencies while maintaining computational efficiency. The FinLagX TCN now uses **enriched features** (44+ columns including news sentiment and macro indicators) with **early stopping** for efficient training.
 
 ## Architecture Details
 
@@ -37,10 +37,11 @@
 - **Kernel Size**: 3
 - **Number of Channels**: [32, 32, 32] (3 layers)
 - **Dilation Pattern**: Exponential (1, 2, 4)
-- **Dropout**: 0.2
-- **Learning Rate**: 0.001
-- **Epochs**: 100
+- **Dropout**: 0.3
+- **Learning Rate**: 0.001 (with ReduceLROnPlateau)
+- **Max Epochs**: 80 (early stopping with patience 12)
 - **Batch Size**: 32
+- **Gradient Clipping**: max_norm=1.0
 
 ## Advantages over LSTM
 
@@ -54,15 +55,24 @@
 
 ## Input Features
 
-Same as LSTM implementation:
+Same as LSTM implementation (from enriched parquet):
 
-1. **Base Features**:
-   - Returns
-   - 20-day volatility
-   - 20-day SMA
-   - 50-day SMA
+1. **Base Features** (33 columns):
+   - Returns, pct_returns, intraday_range
+   - SMA/EMA at 5, 10, 20, 50 days
+   - Volatility at 5, 10, 20, 50 days
+   - Volume MAs at multiple windows
+   - RSI-14
+   - Auto-regressive lags (returns + volume at 1/2/3/5/10 days)
 
-2. **Lead-Lag Features** (from Granger causality):
+2. **News Sentiment** (5 columns):
+   - news_equities, news_commodities, news_crypto, news_forex, news_emerging
+
+3. **Macro Indicators** (8 columns):
+   - CPI, GDP, Unemployment, Fed Funds, 10Y Yield
+   - Derived: CPI change, rate spread, unemployment change
+
+4. **Lead-Lag Features** (from Granger causality):
    - Lagged returns from assets that Granger-cause the target
    - Example: `SP500_lag2`, `Gold_lag5`
 
@@ -114,9 +124,9 @@ This will:
 
 Based on TCN literature and our data:
 
-- **Directional Accuracy**: 60-70% (similar to or better than LSTM)
-- **RMSE**: Comparable to LSTM, possibly 5-10% improvement
-- **Training Time**: 30-50% faster than LSTM
+- **Directional Accuracy**: 55-65% (improved with enriched features + early stopping)
+- **RMSE**: Expected 5-15% improvement over base model
+- **Training Time**: 30-50% faster than fixed 100 epochs due to early stopping
 - **Stability**: More consistent across different seeds
 
 ## Theoretical Foundation
@@ -179,5 +189,5 @@ print("TCN Accuracy: ", tcn_metrics['Directional_Accuracy_%'].values[0])
 ---
 
 **Author**: FinLagX Research Team  
-**Date**: November 2025  
-**Model Type**: Temporal Convolutional Network (TCN)
+**Updated**: March 2026  
+**Model Type**: Temporal Convolutional Network (TCN) with Early Stopping

@@ -20,6 +20,20 @@ services:
       timeout: 5s
       retries: 5
 
+  mongodb:
+    image: mongo:latest
+    container_name: finlagx_mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-finlagx_mongo}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - finlagx_network
+
   # MLflow Tracking Server
   mlflow:
     image: ghcr.io/mlflow/mlflow:v2.18.0
@@ -96,6 +110,8 @@ volumes:
   redis_data:
     driver: local
   mlflow_artifacts:
+    driver: local
+  mongodb_data:
     driver: local
 
 networks:

@@ -6,6 +6,9 @@ import pandas as pd
 import numpy as np
 from statsmodels.tsa.stattools import grangercausalitytests
 from itertools import combinations
+import warnings
+warnings.filterwarnings('ignore', category=FutureWarning)
+
 import logging
 from datetime import datetime
 from sqlalchemy import text

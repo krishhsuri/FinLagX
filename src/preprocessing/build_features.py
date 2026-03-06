@@ -1,9 +1,9 @@
 """
 Build Features Pipeline - Final Feature Dataset Builder
 =========================================================
-Fetches market data from TimescaleDB and news sentiment from MongoDB,
-aligns them on a daily basis, and produces the final feature-rich
-dataset for the modeling phase.
+Fetches market data from TimescaleDB, macro indicators from TimescaleDB,
+and news sentiment from MongoDB. Aligns them on a daily basis and
+produces the final feature-rich dataset for the modeling phase.
 
 Output: data/processed/market/aligned_market_data.parquet
 """
@@ -193,6 +193,99 @@ def fetch_news_sentiment():
 
 
 # ============================================================================
+# Step 2b – Fetch Macro Data from TimescaleDB
+# ============================================================================
+
+def fetch_macro_data():
+    """
+    Fetch macroeconomic indicators from TimescaleDB ``macro_data`` table.
+
+    Indicators (from config_macro.yaml):
+        - CPI (Consumer Price Index)
+        - GDP (Gross Domestic Product)
+        - UNEMPLOYMENT (Unemployment Rate)
+        - FEDFUNDS (Fed Funds Rate)
+        - US10Y_YIELD (10-Year Treasury Rate)
+
+    These are published monthly/quarterly, so we forward-fill them to daily
+    frequency and compute derived features:
+        - cpi_change      : monthly % change in CPI
+        - rate_spread     : US10Y_YIELD - FEDFUNDS (yield curve)
+        - unemployment_chg: monthly change in unemployment rate
+
+    Returns
+    -------
+    pd.DataFrame
+        Wide-format DataFrame indexed by ``date`` with one column per
+        macro indicator plus derived features.
+    """
+    logger.info("=" * 70)
+    logger.info("STEP 2b: Fetching macro data from TimescaleDB")
+    logger.info("=" * 70)
+
+    try:
+        engine = get_engine()
+        query = "SELECT time, indicator, value FROM macro_data ORDER BY time"
+        macro_df = pd.read_sql(query, engine)
+
+        if macro_df.empty:
+            logger.warning("  No macro data found in TimescaleDB.")
+            return pd.DataFrame()
+
+        logger.info(f"  Fetched {len(macro_df)} macro data points")
+        logger.info(f"  Indicators: {macro_df['indicator'].unique().tolist()}")
+
+        # Pivot from long to wide: one column per indicator
+        macro_df['time'] = pd.to_datetime(macro_df['time'])
+        macro_wide = macro_df.pivot_table(
+            index='time', columns='indicator', values='value', aggfunc='last'
+        ).reset_index()
+        macro_wide = macro_wide.rename(columns={'time': 'date'})
+
+        # Forward-fill to daily frequency
+        # (Macro data is monthly/quarterly, but we want daily for merging)
+        date_range = pd.date_range(
+            start=macro_wide['date'].min(),
+            end=macro_wide['date'].max(),
+            freq='D'
+        )
+        macro_daily = pd.DataFrame({'date': date_range})
+        macro_daily = macro_daily.merge(macro_wide, on='date', how='left')
+        macro_daily = macro_daily.ffill()  # Forward-fill monthly values to daily
+
+        # Rename columns with macro_ prefix for clarity
+        indicator_cols = [c for c in macro_daily.columns if c != 'date']
+        rename_map = {c: f'macro_{c.lower()}' for c in indicator_cols}
+        macro_daily = macro_daily.rename(columns=rename_map)
+
+        # Compute derived macro features
+        if 'macro_cpi' in macro_daily.columns:
+            macro_daily['macro_cpi_change'] = macro_daily['macro_cpi'].pct_change()
+
+        if 'macro_us10y_yield' in macro_daily.columns and 'macro_fedfunds' in macro_daily.columns:
+            macro_daily['macro_rate_spread'] = (
+                macro_daily['macro_us10y_yield'] - macro_daily['macro_fedfunds']
+            )
+
+        if 'macro_unemployment' in macro_daily.columns:
+            macro_daily['macro_unemployment_chg'] = macro_daily['macro_unemployment'].diff()
+
+        # Fill any remaining NaN from derived features
+        macro_daily = macro_daily.fillna(0.0)
+
+        logger.info(f"  Macro data expanded to daily: {len(macro_daily)} days, "
+                    f"{len(macro_daily.columns)} columns")
+        logger.info(f"  Columns: {macro_daily.columns.tolist()}")
+
+        return macro_daily
+
+    except Exception as e:
+        logger.warning(f"  Could not fetch macro data: {e}")
+        logger.warning("  Proceeding without macro indicators.")
+        return pd.DataFrame()
+
+
+# ============================================================================
 # Step 3 – Aggregate Daily Sentiment
 # ============================================================================
 
@@ -266,16 +359,16 @@ def aggregate_daily_sentiment(news_df):
 
 
 # ============================================================================
-# Step 4 – Align & Merge (Market + Sentiment)
+# Step 4 – Align & Merge (Market + Sentiment + Macro)
 # ============================================================================
 
-def align_market_and_sentiment(market_df, sentiment_daily_df):
+def align_market_and_sentiment(market_df, sentiment_daily_df, macro_daily_df=None):
     """
-    Merge market data with daily sentiment data on the calendar date.
+    Merge market data with daily sentiment and macro data on the calendar date.
 
     Market data is keyed by (symbol, time). We extract the date from ``time``
-    and perform a left join so that every market row gets the corresponding
-    day's sentiment features. Days without news default to 0.
+    and perform left joins so that every market row gets the corresponding
+    day's sentiment and macro features. Missing days default to 0.
 
     Returns
     -------
@@ -283,15 +376,15 @@ def align_market_and_sentiment(market_df, sentiment_daily_df):
         Final merged dataset.
     """
     logger.info("=" * 70)
-    logger.info("STEP 4: Aligning market data with sentiment features")
+    logger.info("STEP 4: Aligning market data with sentiment + macro features")
     logger.info("=" * 70)
 
     market_df = market_df.copy()
     market_df['date'] = pd.to_datetime(market_df['time']).dt.normalize()
 
+    # --- Merge sentiment ---
     if sentiment_daily_df.empty:
-        logger.warning("  No sentiment data – dataset will contain market features only.")
-        # Add placeholder sentiment columns
+        logger.warning("  No sentiment data – adding placeholder columns.")
         market_df['overall_sentiment_mean'] = 0.0
         market_df['overall_sentiment_std'] = 0.0
         market_df['overall_news_count'] = 0
@@ -302,7 +395,6 @@ def align_market_and_sentiment(market_df, sentiment_daily_df):
 
         aligned = market_df.merge(sentiment_daily_df, on='date', how='left')
 
-        # Fill days with no news → 0 for counts, 0.0 for sentiment scores
         sentiment_cols = [c for c in aligned.columns
                          if 'sentiment' in c or 'news_count' in c]
         for col in sentiment_cols:
@@ -310,6 +402,21 @@ def align_market_and_sentiment(market_df, sentiment_daily_df):
                 aligned[col] = aligned[col].fillna(0).astype(int)
             else:
                 aligned[col] = aligned[col].fillna(0.0)
+
+    # --- Merge macro data ---
+    if macro_daily_df is not None and not macro_daily_df.empty:
+        macro_daily_df = macro_daily_df.copy()
+        macro_daily_df['date'] = pd.to_datetime(macro_daily_df['date']).dt.normalize()
+
+        aligned = aligned.merge(macro_daily_df, on='date', how='left')
+
+        macro_cols = [c for c in aligned.columns if c.startswith('macro_')]
+        for col in macro_cols:
+            aligned[col] = aligned[col].ffill().fillna(0.0)
+
+        logger.info(f"  Merged {len(macro_cols)} macro features")
+    else:
+        logger.warning("  No macro data – skipping macro merge.")
 
     # Drop the helper 'date' column
     aligned = aligned.drop(columns=['date'], errors='ignore')
@@ -434,12 +541,13 @@ def build_features(symbols=None, start_date=None, end_date=None):
     Run the complete Build Features pipeline.
 
     Pipeline steps:
-        1. Fetch market data from TimescaleDB
-        2. Fetch news sentiment from MongoDB
-        3. Aggregate daily sentiment statistics
-        4. Align and merge market + sentiment data
-        5. Add derived features
-        6. Save final dataset to Parquet
+        1.  Fetch market data from TimescaleDB
+        2.  Fetch news sentiment from MongoDB
+        2b. Fetch macro data from TimescaleDB
+        3.  Aggregate daily sentiment statistics
+        4.  Align and merge market + sentiment + macro data
+        5.  Add derived features
+        6.  Save final dataset to Parquet
 
     Parameters
     ----------
@@ -470,11 +578,14 @@ def build_features(symbols=None, start_date=None, end_date=None):
     # Step 2 – News sentiment
     news_df = fetch_news_sentiment()
 
+    # Step 2b – Macro data
+    macro_daily = fetch_macro_data()
+
     # Step 3 – Daily aggregation
     sentiment_daily = aggregate_daily_sentiment(news_df)
 
-    # Step 4 – Align & merge
-    aligned_df = align_market_and_sentiment(market_df, sentiment_daily)
+    # Step 4 – Align & merge (market + sentiment + macro)
+    aligned_df = align_market_and_sentiment(market_df, sentiment_daily, macro_daily)
 
     # Step 5 – Derived features
     final_df = add_derived_features(aligned_df)
@@ -502,11 +613,17 @@ def build_features(symbols=None, start_date=None, end_date=None):
         non_null = final_df[col].notna().sum()
         logger.info(f"    {i:3d}. {col:<40s} {str(dtype):<15s} ({non_null:,} non-null)")
 
+    # Count feature types
+    n_macro = len([c for c in final_df.columns if c.startswith('macro_')])
+    n_sentiment = len([c for c in final_df.columns if 'sentiment' in c or 'news_count' in c])
+    n_base = final_df.shape[1] - n_macro - n_sentiment
+    logger.info(f"\n  Feature breakdown: {n_base} market + {n_sentiment} sentiment + {n_macro} macro")
+
     logger.info("\n" + "=" * 70)
     logger.info("  Ready for modeling! Next steps:")
     logger.info("    1. python -m src.modeling.granger_causality")
-    logger.info("    2. python -m src.modeling.lstm_leadlag")
-    logger.info("    3. python -m src.modeling.tcn_leadlag")
+    logger.info("    2. python src/modeling/lstm_leadlag.py")
+    logger.info("    3. python src/modeling/tcn_leadlag.py")
     logger.info("=" * 70 + "\n")
 
     return final_df
