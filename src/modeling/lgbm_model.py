@@ -15,36 +15,42 @@ logger = logging.getLogger(__name__)
 # --- Configuration ---
 PROCESSED_DATA_PATH = "data/processed/market/aligned_market_data.parquet"
 MLFLOW_EXPERIMENT_NAME = "FinLagX_LGBM_Benchmark"
-TARGET_ASSET = "S&P 500"
+TARGET_ASSET = "SP500"
 
-def create_tabular_features(df, target_col, lookback_window=[1, 3, 5, 10]):
+def create_tabular_features(df, target_symbol="SP500", lookback_window=[1, 3, 5, 10]):
     """
-    Converts Time-Series to Tabular classification format
-    Calculates rolling means and standard deviations
-    Target: 1 if returns > 0 else 0
+    Converts Time-Series to Tabular classification format using advanced indicators.
+    Target: 1 if next day's return > 0 else 0
     """
-    logger.info("🛠️ Creating tabular features for LightGBM...")
+    logger.info(f"🛠️ Creating tabular features for LightGBM targeting {target_symbol}...")
+    
+    # Filter for the target asset
+    df_asset = df[df['symbol'] == target_symbol].copy()
+    df_asset = df_asset.sort_values('time')
     
     # We want to predict tomorrow's direction
-    # Target = 1 if tomorrow's return > 0, else 0
-    target = (df[target_col].shift(-1) > 0).astype(int)
+    target = (df_asset['returns'].shift(-1) > 0).astype(int)
     
-    features = pd.DataFrame(index=df.index)
+    # Use advanced technical indicators + sentiment if available
+    essential_cols = [
+        'returns', 'volatility_20', 'sma_20', 'sma_50', 'volume_change',
+        'bb_upper', 'bb_lower', 'macd', 'macd_signal', 'rsi_14', 'momentum_10'
+    ]
+    sentiment_cols = [c for c in df_asset.columns if 'sentiment' in c or 'news_count' in c]
+    base_features = [c for c in essential_cols + sentiment_cols if c in df_asset.columns]
     
-    # Add rolling features for ALL assets
-    for col in df.columns:
-        features[f"{col}_return"] = df[col]
-        
+    features = df_asset[base_features].copy()
+    
+    # Moving averages of features
+    for col in base_features:
         for w in lookback_window:
-            features[f"{col}_roll_mean_{w}"] = df[col].rolling(window=w).mean()
+            features[f"{col}_roll_mean_{w}"] = df_asset[col].rolling(window=w).mean()
             if w > 1:
-                features[f"{col}_roll_std_{w}"] = df[col].rolling(window=w).std()
-            
+                features[f"{col}_roll_std_{w}"] = df_asset[col].rolling(window=w).std()
+                
     features['target'] = target
     
-    logger.info(f"Features created before dropna: {features.shape}")
-    
-    # Drop rows that don't have enough history for the max lookback window (10 days)
+    # Drop rows without enough history
     features = features.dropna()
     
     logger.info(f"✅ Created {features.shape[1] - 1} features. Data shape after dropna: {features.shape}")
@@ -56,10 +62,6 @@ def train_lightgbm_model():
     # 1. Load Data
     df = pd.read_parquet(PROCESSED_DATA_PATH)
     
-    if TARGET_ASSET not in df.columns:
-        logger.error(f"Target '{TARGET_ASSET}' not found in dataset!")
-        return
-        
     X, y = create_tabular_features(df, TARGET_ASSET)
     
     # 2. Time-Series Train-Test Split (80/20)

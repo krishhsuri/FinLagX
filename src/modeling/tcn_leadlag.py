@@ -160,7 +160,10 @@ def prepare_data_with_leadlag(fs, symbol, lookback=20):
     logger.info(f"   📥 Loaded {len(df)} rows ({df['time'].min()} to {df['time'].max()})")
     
     # Base features
-    base_features = ['returns', 'volatility_20', 'sma_20', 'sma_50']
+    base_features = [
+        'returns', 'volatility_20', 'sma_20', 'sma_50',
+        'bb_upper', 'bb_lower', 'macd', 'macd_signal', 'rsi_14', 'momentum_10'
+    ]
     feature_cols = [col for col in base_features if col in df.columns]
     
     # Get Granger relationships

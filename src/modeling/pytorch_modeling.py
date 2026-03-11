@@ -23,26 +23,39 @@ NUM_LAYERS = 2
 
 # --- Data Preparation ---
 
-def prepare_data_for_lstm(file_path: str, target_col: str, seq_length: int):
-    """Loads, scales, and creates sequences for the LSTM model."""
+def prepare_data_for_lstm(file_path: str, target_symbol: str, seq_length: int):
+    """Loads, scales, and creates sequences for the LSTM model using sentiment features."""
     print("🔄 Preparing data for LSTM...")
     df = pd.read_parquet(file_path)
-    data = df[[target_col]].values.astype(float)
+    
+    # Filter by symbol
+    df = df[df['symbol'] == target_symbol].copy()
+    
+    # Select features (returns + sentiment)
+    sentiment_cols = [c for c in df.columns if 'sentiment' in c or 'news_count' in c]
+    feature_cols = ['returns'] + sentiment_cols
+    
+    # Drop rows with NaN
+    df = df.dropna(subset=feature_cols)
+    
+    print(f"Using {len(feature_cols)} features: {feature_cols}")
+    data = df[feature_cols].values.astype(float)
     
     scaler = MinMaxScaler(feature_range=(-1, 1))
     scaled_data = scaler.fit_transform(data)
     
     X, y = [], []
+    # Target is the first column (returns) at the next time step
     for i in range(len(scaled_data) - seq_length):
         X.append(scaled_data[i:(i + seq_length)])
-        y.append(scaled_data[i + seq_length])
+        y.append(scaled_data[i + seq_length][0]) # [0] is the return
         
     train_size = int(len(X) * 0.8)
     X_train, X_test = torch.FloatTensor(np.array(X[:train_size])), torch.FloatTensor(np.array(X[train_size:]))
-    y_train, y_test = torch.FloatTensor(np.array(y[:train_size])), torch.FloatTensor(np.array(y[train_size:]))
+    y_train, y_test = torch.FloatTensor(np.array(y[:train_size]).reshape(-1, 1)), torch.FloatTensor(np.array(y[train_size:]).reshape(-1, 1))
     
-    print("✅ Data preparation complete.")
-    return X_train, y_train, X_test, y_test, scaler
+    print(f"✅ Data preparation complete. Train size: {len(X_train)}, Test size: {len(X_test)}")
+    return X_train, y_train, X_test, y_test, scaler, len(feature_cols)
 
 # --- PyTorch Model Definition ---
 
@@ -66,8 +79,9 @@ def main():
     print("🚀 Starting FinLagX PyTorch Modeling Pipeline...")
     
     # 1. Prepare Data
-    X_train, y_train, X_test, y_test, scaler = prepare_data_for_lstm(
-        PROCESSED_DATA_PATH, TARGET_VARIABLE, SEQ_LENGTH
+    target_symbol = "SP500"  # We'll use SP500 instead of "S&P 500" since it aligns with the dataset
+    X_train, y_train, X_test, y_test, scaler, num_features = prepare_data_for_lstm(
+        PROCESSED_DATA_PATH, target_symbol, SEQ_LENGTH
     )
     
     # 2. Set up MLflow
@@ -79,13 +93,14 @@ def main():
         
         # Log hyperparameters
         params = {
-            "target_variable": TARGET_VARIABLE, "seq_length": SEQ_LENGTH, "epochs": EPOCHS,
-            "learning_rate": LEARNING_RATE, "hidden_size": HIDDEN_SIZE, "num_layers": NUM_LAYERS
+            "target_variable": target_symbol, "seq_length": SEQ_LENGTH, "epochs": EPOCHS,
+            "learning_rate": LEARNING_RATE, "hidden_size": HIDDEN_SIZE, "num_layers": NUM_LAYERS,
+            "num_features": num_features
         }
         mlflow.log_params(params)
         
         # 3. Initialize Model, Loss, and Optimizer
-        model = LSTMModel(hidden_layer_size=HIDDEN_SIZE, num_layers=NUM_LAYERS)
+        model = LSTMModel(input_size=num_features, hidden_layer_size=HIDDEN_SIZE, num_layers=NUM_LAYERS)
         loss_function = nn.MSELoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
         
@@ -109,9 +124,16 @@ def main():
         with torch.no_grad():
             test_preds = model(X_test)
         
-        # Inverse transform predictions to original scale
-        actual_preds = scaler.inverse_transform(test_preds.numpy())
-        actual_y_test = scaler.inverse_transform(y_test.numpy())
+        # To accurately inverse transform, we need to pad the predictions with zeros for the other features
+        # since the scaler expects `num_features` columns
+        
+        def inverse_transform_target(scaled_preds, scaler_obj, n_features):
+            dummy = np.zeros((len(scaled_preds), n_features))
+            dummy[:, 0] = scaled_preds.flatten()
+            return scaler_obj.inverse_transform(dummy)[:, 0]
+
+        actual_preds = inverse_transform_target(test_preds.numpy(), scaler, num_features)
+        actual_y_test = inverse_transform_target(y_test.numpy(), scaler, num_features)
         
         rmse = np.sqrt(mean_squared_error(actual_y_test, actual_preds))
         print(f"Test RMSE: {rmse:.4f}")

@@ -98,16 +98,20 @@ class MarketDataPreprocessor:
     
     def calculate_essential_features(self, df):
         """
-        Only 3 essential features:
-        - 20-day volatility (rolling std of returns)
-        - 20-day moving average
+        Calculates essential and advanced technical indicators:
+        - 20-day volatility
+        - 20-day & 50-day SMA
+        - Bollinger Bands
+        - MACD
+        - RSI (14-day)
+        - Momentum (10-day)
         - Volume change
         """
-        logger.info("📈 Calculating essential features...")
+        logger.info("📈 Calculating essential and advanced technical features...")
         
         df = df.copy()
         
-        # 20-day rolling volatility (require full window)
+        # 20-day rolling volatility
         df['volatility_20'] = df.groupby('symbol')['returns'].transform(
             lambda x: x.rolling(window=20, min_periods=20).std()
         )
@@ -117,15 +121,38 @@ class MarketDataPreprocessor:
             lambda x: x.rolling(window=20, min_periods=20).mean()
         )
         
-        # 50-day simple moving average (slower trend)
+        # 50-day simple moving average
         df['sma_50'] = df.groupby('symbol')['close_price'].transform(
             lambda x: x.rolling(window=50, min_periods=50).mean()
         )
         
-        # Volume change (interest/activity indicator)
+        # Bollinger Bands (20-day SMA +/- 2*STD)
+        df['bb_upper'] = df['sma_20'] + 2 * df.groupby('symbol')['close_price'].transform(lambda x: x.rolling(20, min_periods=20).std())
+        df['bb_lower'] = df['sma_20'] - 2 * df.groupby('symbol')['close_price'].transform(lambda x: x.rolling(20, min_periods=20).std())
+        
+        # MACD (12-day EMA - 26-day EMA)
+        ema12 = df.groupby('symbol')['close_price'].transform(lambda x: x.ewm(span=12, adjust=False).mean())
+        ema26 = df.groupby('symbol')['close_price'].transform(lambda x: x.ewm(span=26, adjust=False).mean())
+        df['macd'] = ema12 - ema26
+        df['macd_signal'] = df.groupby('symbol')['macd'].transform(lambda x: x.ewm(span=9, adjust=False).mean())
+        
+        # RSI (14-day)
+        def compute_rsi(close_prices, window=14):
+            delta = close_prices.diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
+            rs = gain / loss
+            return 100 - (100 / (1 + rs))
+            
+        df['rsi_14'] = df.groupby('symbol')['close_price'].transform(compute_rsi)
+        
+        # Momentum (10-day price change)
+        df['momentum_10'] = df.groupby('symbol')['close_price'].transform(lambda x: x.pct_change(periods=10))
+        
+        # Volume change
         df['volume_change'] = df.groupby('symbol')['volume'].pct_change()
         
-        logger.info("  Essential features calculated")
+        logger.info("  Essential and advanced technical features calculated")
         
         return df
     

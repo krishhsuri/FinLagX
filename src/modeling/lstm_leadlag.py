@@ -85,7 +85,10 @@ def prepare_data_with_leadlag(fs, symbol, lookback=20):
     logger.info(f"   📥 Loaded {len(df)} rows ({df['time'].min()} to {df['time'].max()})")
     
     # Base features
-    base_features = ['returns', 'volatility_20', 'sma_20', 'sma_50']
+    base_features = [
+        'returns', 'volatility_20', 'sma_20', 'sma_50',
+        'bb_upper', 'bb_lower', 'macd', 'macd_signal', 'rsi_14', 'momentum_10'
+    ]
     feature_cols = [col for col in base_features if col in df.columns]
     
     # Get Granger relationships
@@ -304,7 +307,7 @@ def export_to_csv(symbol, data_dict, y_test, predictions, metrics):
     feature_file = os.path.join(data_folder, f'{symbol_lower}_features.csv')
     feature_info = pd.DataFrame({
         'Feature_Name': data_dict['feature_cols'],
-        'Feature_Type': ['Base' if f in ['returns', 'volatility_20', 'sma_20', 'sma_50'] 
+        'Feature_Type': ['Base' if f in ['returns', 'volatility_20', 'sma_20', 'sma_50', 'bb_upper', 'bb_lower', 'macd', 'macd_signal', 'rsi_14', 'momentum_10'] 
                        else 'Lead-Lag' for f in data_dict['feature_cols']]
     })
     feature_info.to_csv(feature_file, index=False)

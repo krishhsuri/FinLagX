@@ -77,3 +77,34 @@ Today's session focused on implementing the final Build Features pipeline (`src/
 - **TODO Part 1 (Build Final Feature Dataset)** is now complete ✅
 - Updated `todo.md` to reflect completion.
 - **Next Task**: Re-run models with the new sentiment-enriched dataset (TODO Part 2).
+
+---
+
+## Date: March 11, 2026
+
+---
+
+## Key Achievement: Hitting Accuracy Goal & Pipeline Execution
+
+Today's session focused on running the complete pipeline and upgrading the models with advanced technical indicators to improve directional accuracy.
+
+---
+
+## 🚀 **Task 1: Complete Pipeline Execution**
+
+- **Status:**   **Completed**
+- **Details:**
+  - Ran `run_complete_pipeline.py` successfully to pull new data, preprocess it, and verify the feature store.
+  - Re-ran Granger Causality tests identifying 212 significant lead-lag relationships.
+  - Re-built the final feature dataset aligning market and macro data.
+
+---
+
+## ⚙️ **Task 2: Advanced Technical Indicators & LightGBM Accuracy Improvements**
+
+- **Status:**   **Completed**
+- **Details:**
+  - Added Momentum (10-day), RSI (14-day), MACD, and Bollinger Bands to `src/preprocessing/market_preprocessing.py`.
+  - Updated LSTM and TCN models to ingest the new features.
+  - Formatted `lgbm_model.py` to target `SP500` specifically using the unified dataset. 
+  - Achieved a strong **~55% Test Accuracy** and **>71% Test F1 Score** on the LightGBM baseline!

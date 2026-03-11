@@ -70,13 +70,22 @@ def run_traditional_models(df):
     # You should use a differenced series for this.
     if len(df.columns) > 1:
         print("📈 Fitting a Vector Autoregression (VAR) model...")
-        # A simple VAR model on 'Close' and 'Volume' for demonstration
-        # You should difference the data before fitting VAR to ensure stationarity
-        model_data = df[['Close']].diff().dropna()
-        if not model_data.empty and len(model_data) > 2:
-            model = VAR(model_data)
-            results = model.fit()
-            print(results.summary())
+        # A simple VAR model on returns. 
+        # Since 'returns' is already stationary, we can pass it directly
+        # Let's add 'volatility_20' if available to make it multivariate
+        cols = [c for c in ['returns', 'volatility_20', 'overall_sentiment_mean'] if c in df.columns]
+        if len(cols) > 1:
+            model_data = df[cols].dropna()
+        else:
+            model_data = df[['returns']].dropna() if 'returns' in df.columns else pd.DataFrame()
+            
+        if not model_data.empty and len(model_data) > 2 and len(model_data.columns) > 1:
+            try:
+                model = VAR(model_data)
+                results = model.fit()
+                print(results.summary())
+            except Exception as e:
+                print(f"  Could not fit VAR model due to numerical issues: {e}")
             
             # Forecast example
             # print("\n🔮 Forecasting 5 steps ahead:")
