@@ -32,11 +32,28 @@ st.set_page_config(
 
 # ==================== HEADER ====================
 
-st.markdown("# 📈 LSTM Predictions Analysis")
+# ==================== HEADER ====================
+
 st.markdown("""
-Explore LSTM model predictions for individual assets. View performance metrics, prediction accuracy, 
-and discover which lead-lag relationships the model leverages for each asset.
-""")
+<style>
+    .main-header {
+        font-family: 'Inter', sans-serif;
+        font-size: 3rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #22d3ee 0%, #818cf8 50%, #d946ef 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("<div class='main-header'>📈 Neural Engine Analysis</div>", unsafe_allow_html=True)
+st.markdown("""
+<div style='color: #94a3b8; font-size: 1.1rem; margin-bottom: 2rem;'>
+    Deep dive into neural performance metrics and predictive streams for individual market nodes.
+</div>
+""", unsafe_allow_html=True)
 
 st.markdown("---")
 

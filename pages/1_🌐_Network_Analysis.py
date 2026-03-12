@@ -27,11 +27,37 @@ st.set_page_config(
 
 # ==================== HEADER ====================
 
-st.markdown("# 🌐 Granger Causality Network Analysis")
+# ==================== HEADER ====================
+
 st.markdown("""
-Explore lead-lag relationships between financial assets. The network shows which assets **predict** others,
-revealing hidden market dynamics and systemic risk patterns.
-""")
+<style>
+    .main-header {
+        font-family: 'Inter', sans-serif;
+        font-size: 3rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #22d3ee 0%, #818cf8 50%, #d946ef 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+    }
+    .glass-card {
+        background: rgba(30, 41, 59, 0.5);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1.5rem;
+        border-radius: 1rem;
+        margin-bottom: 1rem;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("<div class='main-header'>🌐 Network Analysis</div>", unsafe_allow_html=True)
+st.markdown("""
+<div style='color: #94a3b8; font-size: 1.1rem; margin-bottom: 2rem;'>
+    Explore lead-lag relationships between financial assets. The network shows which assets <b>predict</b> others,
+    revealing hidden market dynamics and systemic risk patterns.
+</div>
+""", unsafe_allow_html=True)
 
 st.markdown("---")
 

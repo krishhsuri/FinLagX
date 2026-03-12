@@ -13,6 +13,12 @@ from src.data_storage.database_setup import get_engine
 import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime, timedelta
+import mlflow
+from mlflow.tracking import MlflowClient
+
+# MLflow Tracking URI for Docker
+MLFLOW_URI = "http://127.0.0.1:5000"
+
 
 # Constants
 project_root = Path(__file__).parent.parent
@@ -398,3 +404,30 @@ def color_correct_prediction(val):
         return 'background-color: #48BB78; color: white'
     else:
         return 'background-color: #FC8181; color: white'
+
+@st.cache_data(ttl=60)
+def get_mlflow_latest_results():
+    """Fetch latest metrics from MLflow research experiments"""
+    try:
+        mlflow.set_tracking_uri(MLFLOW_URI)
+        client = MlflowClient()
+        experiments = client.search_experiments()
+        
+        results = []
+        for exp in experiments:
+            if exp.name == "Default": continue
+            runs = client.search_runs(
+                experiment_ids=[exp.experiment_id], 
+                order_by=["start_time DESC"], 
+                max_results=1
+            )
+            if runs:
+                run = runs[0]
+                results.append({
+                    'Experiment': exp.name,
+                    'Metrics': run.data.metrics,
+                    'ID': run.info.run_id
+                })
+        return results
+    except Exception as e:
+        return []

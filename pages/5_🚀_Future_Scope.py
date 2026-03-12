@@ -19,49 +19,47 @@ st.set_page_config(
 st.markdown("""
 <style>
     .future-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        background: linear-gradient(90deg, #667EEA 0%, #764BA2 100%);
+        font-family: 'Inter', sans-serif;
+        font-size: 3.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #22d3ee 0%, #818cf8 50%, #d946ef 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
+        text-shadow: 0 0 30px rgba(34, 211, 238, 0.3);
         margin-bottom: 1rem;
     }
     
     .phase-card {
-        background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+        background: rgba(30, 41, 59, 0.8);
         padding: 2rem;
-        border-radius: 1rem;
-        color: white;
+        border-radius: 1.5rem;
+        color: #f8fafc;
         margin: 1rem 0;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border: 2px solid #818cf8;
+        box-shadow: 0 0 20px rgba(129, 140, 248, 0.3);
     }
     
     .milestone-box {
-        background: #F8FAFC;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 4px solid #667EEA;
-        margin: 0.5rem 0;
-    }
-    
-    .impact-metric {
-        background: white;
+        background: rgba(15, 23, 42, 0.6);
         padding: 1.5rem;
-        border-radius: 0.5rem;
-        text-align: center;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-radius: 1rem;
+        border-left: 5px solid #22d3ee;
+        margin: 0.8rem 0;
+        color: #e2e8f0;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # ==================== HEADER ====================
 
-st.markdown("<h1 class='future-header'>  Future Scope & Research Roadmap</h1>", unsafe_allow_html=True)
+st.markdown("<div class='future-header'>🚀 SYSTEM EVOLUTION ROADMAP</div>", unsafe_allow_html=True)
 
 st.markdown("""
-**FinLagX** is positioned to evolve into a **world-class systemic risk intelligence platform**. 
-This roadmap outlines our vision for transforming cutting-edge research into production-ready financial technology.
-""")
+<div style='color: #94a3b8; font-size: 1.2rem; margin-bottom: 2.5rem;'>
+    <b>FinLagX</b> is evolving into a world-class <b>autonomous market intelligence mesh</b>. 
+    This roadmap outlines the transition from econometric research to next-gen neural finance.
+</div>
+""", unsafe_allow_html=True)
 
 st.markdown("---")
 
