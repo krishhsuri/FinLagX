@@ -45,6 +45,7 @@ def prepare_transformer_data(file_path, target_symbol="SP500", seq_length=10):
     # Selecting the returns and essential indicators as features
     feature_cols = ['returns', 'volatility_20', 'sma_20', 'sma_50', 'rsi_14', 'momentum_10']
     cols = [c for c in feature_cols if c in df_asset.columns]
+    df_asset = df_asset.dropna(subset=cols)
     
     data = df_asset[cols].values.astype(float)
     scaler = MinMaxScaler(feature_range=(-1, 1))
@@ -67,13 +68,13 @@ def train_transformer():
     logger.info("🚀 Starting FinLagX Transformer Modeling Pipeline...")
     X_train, y_train, X_test, y_test, input_dim = prepare_transformer_data(PROCESSED_DATA_PATH, TARGET_SYMBOL, SEQ_LENGTH)
     
-    mlflow.set_tracking_uri("http://localhost:5000")
+    mlflow.set_tracking_uri("http://127.0.0.1:5000")
     mlflow.set_experiment("FinLagX_Transformer_Research")
     
     with mlflow.start_run():
         model = TimeSeriesTransformer(input_dim=input_dim, d_model=D_MODEL, n_heads=HEADS)
         criterion = nn.MSELoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.0001) # Lower LR
         
         logger.info(f"⏳ Training Transformer for {EPOCHS} epochs...")
         for epoch in range(EPOCHS):
@@ -81,6 +82,11 @@ def train_transformer():
             optimizer.zero_grad()
             output = model(X_train)
             loss = criterion(output, y_train)
+            
+            if torch.isnan(loss):
+                logger.error(f"❌ NaN loss detected at epoch {epoch+1}")
+                break
+            
             loss.backward()
             optimizer.step()
             
@@ -96,8 +102,8 @@ def train_transformer():
             logger.info(f"📈 Test MSE: {test_loss.item():.6f}")
             mlflow.log_metric("test_mse", test_loss.item())
             
-        mlflow.pytorch.log_model(model, "transformer_model")
-        logger.info("✅ Transformer model logged to MLflow.")
+        # mlflow.pytorch.log_model(model, "transformer_model")
+        logger.info("✅ Transformer model logged (skipped artifact for now).")
 
 if __name__ == "__main__":
     train_transformer()

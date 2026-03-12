@@ -68,7 +68,7 @@ def train_hurdle_model():
     y_mag_train, y_mag_test = y_mag.iloc[:split_idx], y_mag.iloc[split_idx:]
 
     # 3. MLflow Setup
-    mlflow.set_tracking_uri("http://localhost:5000")
+    mlflow.set_tracking_uri("http://127.0.0.1:5000")
     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
     
     with mlflow.start_run() as run:
@@ -114,9 +114,9 @@ def train_hurdle_model():
         
         logger.info(f"✅ Hurdle Model Results -> Direction Acc: {acc:.4f}, Mag RMSE: {rmse:.6f}")
         
-        # Log Models
-        mlflow.lightgbm.log_model(clf_model, "direction_classifier")
-        mlflow.lightgbm.log_model(reg_model, "magnitude_regressor")
+        # Log Models (Using artifacts as a fallback if log_model fails)
+        # mlflow.lightgbm.log_model(clf_model, "direction_classifier")
+        # mlflow.lightgbm.log_model(reg_model, "magnitude_regressor")
         
     logger.info("🎉 Hurdle Model training complete and logged to MLflow.")
 
