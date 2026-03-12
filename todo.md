@@ -56,7 +56,7 @@ The project has successfully completed the data pipelines, deep learning baselin
 
 - ~~**Introduce Tree-Based Benchmarks (LightGBM/XGBoost)**~~: ✅ COMPLETED (March 8, 2026). Implemented Gradient Boosting trees as a strong baseline model, framing time-series forecasting as a tabular learning problem.
 - **Time-Series Transformers**: Implement a Transformer-based architecture specifically designed for time-series forecasting.
-- **Target Engineering (Direction First, Magnitude Second)**: Utilize a two-stage Hurdle Model approach (Classification for direction, Regression for magnitude).
+- **Target Engineering (Direction First, Magnitude Second)**: ✅ COMPLETED (March 12, 2026). Implemented Two-Stage Hurdle Model (LightGBM Classifier + Regressor).
 
 ### 2. Dataset & Feature Engineering Improvements
 
@@ -67,5 +67,5 @@ The project has successfully completed the data pipelines, deep learning baselin
 
 ### 3. MLOps & Orchestration
 
-- **Hyperparameter Tuning**: Tune hyperparameters for models using MLflow's tracking capabilities.
+- **Hyperparameter Tuning**: ✅ COMPLETED (March 12, 2026). Integrated Optuna for automated search and logging to MLflow.
 - **Orchestration**: Re-evaluate integrating **Prefect** for more robust ETL pipeline orchestration.

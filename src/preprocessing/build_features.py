@@ -429,7 +429,7 @@ def save_final_dataset(df, output_dir=OUTPUT_DIR, output_file=OUTPUT_FILE):
 # Main Pipeline
 # ============================================================================
 
-def build_features(symbols=None, start_date=None, end_date=None):
+def main(symbols=None, start_date=None, end_date=None):
     """
     Run the complete Build Features pipeline.
 
@@ -537,7 +537,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    df = build_features(
+    df = main(
         symbols=args.symbols,
         start_date=args.start_date,
         end_date=args.end_date,
