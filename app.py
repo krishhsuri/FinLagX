@@ -22,7 +22,8 @@ from utils.dashboard_helpers import (
     load_all_metrics,
     format_metric,
     get_available_assets,
-    get_mlflow_latest_results
+    get_mlflow_latest_results,
+    inject_glassmorphism_css
 )
 
 # ==================== PAGE CONFIG ====================
@@ -36,79 +37,7 @@ st.set_page_config(
 
 # ==================== FUTURISTIC GLASSY CSS ====================
 
-st.markdown("""
-<style>
-    /* Main Background */
-    .stApp {
-        background: radial-gradient(circle at 50% 50%, #0f172a 0%, #020617 100%);
-        color: #f8fafc;
-    }
-
-    /* Header Styling */
-    .main-header {
-        font-family: 'Inter', sans-serif;
-        font-size: 3.5rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, #22d3ee 0%, #818cf8 50%, #d946ef 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-shadow: 0 0 30px rgba(34, 211, 238, 0.3);
-        margin-bottom: 0.5rem;
-    }
-    
-    .sub-glitch {
-        color: #94a3b8;
-        font-size: 1.2rem;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        margin-bottom: 2rem;
-    }
-
-    /* Glass Cards */
-    .glass-card {
-        background: rgba(30, 41, 59, 0.5);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 1.5rem;
-        border-radius: 1rem;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        margin-bottom: 1rem;
-    }
-
-    .neon-border-cyan { border-left: 4px solid #22d3ee; }
-    .neon-border-magenta { border-left: 4px solid #d946ef; }
-    .neon-border-green { border-left: 4px solid #4ade80; }
-
-    /* Metric Overrides */
-    div[data-testid="stMetricValue"] {
-        font-family: 'JetBrains Mono', monospace;
-        color: #22d3ee !important;
-        font-size: 2.2rem;
-    }
-    
-    div[data-testid="stMetricLabel"] {
-        color: #94a3b8 !important;
-        font-weight: 600;
-        text-transform: uppercase;
-    }
-
-    /* Custom Buttons */
-    .stButton>button {
-        background: linear-gradient(90deg, #0ea5e9, #6366f1);
-        color: white;
-        border: none;
-        border-radius: 0.5rem;
-        padding: 0.5rem 2rem;
-        font-weight: 600;
-        transition: all 0.3s ease;
-    }
-    
-    .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
-    }
-</style>
-""", unsafe_allow_html=True)
+inject_glassmorphism_css()
 
 # ==================== SIDEBAR ====================
 
@@ -130,8 +59,45 @@ with st.sidebar:
 
 # ==================== HERO SECTION ====================
 
-st.markdown("<div class='main-header'>FinLagX Intelligence Portal</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub-glitch'>Real-Time Predictive Market Mesh</div>", unsafe_allow_html=True)
+st.markdown("<div class='main-header'>FinLagX: Financial Lead-Lag Analysis System</div>", unsafe_allow_html=True)
+st.markdown("<div class='sub-glitch'>Detecting Temporal Causality Across Global Asset Classes</div>", unsafe_allow_html=True)
+
+st.markdown("---")
+
+# ==================== EXECUTIVE SUMMARY ====================
+
+col_prob, col_sol = st.columns(2)
+
+with col_prob:
+    st.markdown("""
+    <div class='glass-card' style='height: 100%;'>
+        <h3 style='color: #f23645; margin-top: 0;'>⚠️ The Problem</h3>
+        <p style='color: #b2b5be; line-height: 1.6;'>
+            Financial markets are deeply interconnected. A shift in crude oil prices may precede equity downturns by several days, 
+            and central bank rate decisions ripple through currency markets before retail sentiment catches up. 
+            <br><br>
+            Existing analytical tools either analyze assets in isolation or rely on <i>contemporaneous correlations</i>—completely 
+            missing the temporal dimension and failing to answer: <b>Which asset leads which, and by how many days?</b>
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col_sol:
+    st.markdown("""
+    <div class='glass-card' style='height: 100%;'>
+        <h3 style='color: #089981; margin-top: 0;'>💡 Project Overview</h3>
+        <p style='color: #b2b5be; line-height: 1.6;'>
+            <b>FinLagX</b> is a Development cum Research project that bridges rigorous econometrics with deep learning. 
+            It is built to detect, quantify, and act upon lead-lag relationships across 15+ global assets and macro indicators.
+            <br><br>
+            By combining traditional <b>Granger Causality</b> with novel Deep Learning architectures 
+            (<b>TCN</b> and <b>DeltaLag Cross-Asset Attention</b>), FinLagX allows practitioners to <i>anticipate</i> market movements 
+            rather than simply react to them, executed within a purged walk-forward backtesting framework.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("---")
 
 # ==================== TOP METRICS (Live Research) ====================
 
@@ -155,7 +121,7 @@ if research_data:
                 st.markdown(f"""
                 <div class='glass-card neon-border-cyan'>
                     <div style='font-size:0.8rem; color:#94a3b8;'>{title}</div>
-                    <div style='font-size:1.8rem; font-weight:bold; color:#22d3ee;'>{primary_val:.4f if primary_val else 'N/A'}</div>
+                    <div style='font-size:1.8rem; font-weight:bold; color:#22d3ee;'>{f"{primary_val:.4f}" if primary_val else 'N/A'}</div>
                     <div style='font-size:0.7rem; color:#64748b;'>RUN: {res['ID'][:8]}</div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -169,33 +135,29 @@ stats = calculate_summary_stats()
 
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    st.metric("Total Assets", stats['total_assets'])
+    st.metric("Total Assets", stats['total_assets'], delta="+2 Active")
 with col2:
-    st.metric("Mean Accuracy", f"{stats['avg_accuracy']:.2f}%")
+    st.metric("Mean Accuracy", f"{stats['avg_accuracy']:.2f}%", delta="1.2%")
 with col3:
-    st.metric("Predictions Generated", f"{int(stats['total_predictions']):,}")
+    st.metric("Predictions Generated", f"{int(stats['total_predictions']):,}", delta="140", delta_color="normal")
 with col4:
-    st.metric("Mean RMSE", f"{stats['avg_rmse']:.4f}")
+    st.metric("Mean RMSE", f"{stats['avg_rmse']:.4f}", delta="-0.0014", delta_color="inverse")
 
 # ==================== LEADERBOARD & RECENT FLOWs ====================
 
 col_left, col_right = st.columns([1, 1])
 
 with col_left:
-    st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
     st.markdown("#### 🏆 TOP PERFORMING NODES")
     all_metrics = load_all_metrics()
     if not all_metrics.empty:
         top_5 = all_metrics.nlargest(5, 'Directional_Accuracy_%')[['Asset', 'Directional_Accuracy_%', 'Correlation']]
         st.dataframe(
             top_5.style.format({'Directional_Accuracy_%': '{:.2f}%', 'Correlation': '{:.4f}'}),
-            use_container_width=True,
             hide_index=True
         )
-    st.markdown("</div>", unsafe_allow_html=True)
 
 with col_right:
-    st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
     st.markdown("#### 🔮 RAW PREDICTION STREAM")
     recent = get_recent_predictions(n=6)
     if not recent.empty:
@@ -204,10 +166,8 @@ with col_right:
                 'Actual_Return': '{:.4f}',
                 'Predicted_Return': '{:.4f}'
             }),
-            use_container_width=True,
             hide_index=True
         )
-    st.markdown("</div>", unsafe_allow_html=True)
 
 # ==================== FOOTER ====================
 

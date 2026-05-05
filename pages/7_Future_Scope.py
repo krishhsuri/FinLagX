@@ -5,6 +5,7 @@ Present the vision and future extensions for FinLagX
 
 import streamlit as st
 from pathlib import Path
+from utils.dashboard_helpers import inject_glassmorphism_css
 
 # ==================== PAGE CONFIG ====================
 
@@ -15,6 +16,8 @@ st.set_page_config(
 )
 
 # ==================== CUSTOM CSS ====================
+
+inject_glassmorphism_css()
 
 st.markdown("""
 <style>

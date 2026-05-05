@@ -19,7 +19,8 @@ from utils.dashboard_helpers import (
     load_asset_predictions,
     create_correlation_heatmap,
     create_performance_comparison,
-    get_available_assets
+    get_available_assets,
+    inject_glassmorphism_css
 )
 import plotly.graph_objects as go
 
@@ -32,6 +33,8 @@ st.set_page_config(
 )
 
 # ==================== HEADER ====================
+
+inject_glassmorphism_css()
 
 st.markdown("# ⚖️ Multi-Asset Comparison")
 st.markdown("""
@@ -87,7 +90,7 @@ if metrics_list:
         st.markdown("#### 🎯 Accuracy Comparison")
         perf_chart = create_performance_comparison(selected_assets)
         if perf_chart:
-            st.plotly_chart(perf_chart, use_container_width=True)
+            st.plotly_chart(perf_chart, width='stretch')
     
     with col2:
         st.markdown("#### 📈 Metrics Table")
@@ -99,7 +102,7 @@ if metrics_list:
                 'MAE': '{:.4f}',
                 'Correlation': '{:.4f}'
             }).background_gradient(subset=['Directional_Accuracy_%'], cmap='RdYlGn'),
-            use_container_width=True,
+            width='stretch',
             hide_index=True
         )
     
@@ -116,7 +119,7 @@ col1, col2 = st.columns([2, 1])
 with col1:
     corr_chart = create_correlation_heatmap(selected_assets)
     if corr_chart:
-        st.plotly_chart(corr_chart, use_container_width=True)
+        st.plotly_chart(corr_chart, width='stretch')
     else:
         st.info("Need at least 2 assets with data for correlation analysis")
 
@@ -176,7 +179,7 @@ if returns_data:
         height=500
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     
     st.info("""
     **Interpretation:** This chart shows cumulative returns starting from 0%. 
@@ -238,7 +241,7 @@ if metrics_list:
                 height=500
             )
             
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
     
     with col2:
         st.markdown("""

@@ -19,7 +19,8 @@ from utils.dashboard_helpers import (
     load_asset_relationships,
     create_prediction_chart,
     create_error_distribution,
-    get_available_assets
+    get_available_assets,
+    inject_glassmorphism_css
 )
 
 # ==================== PAGE CONFIG ====================
@@ -34,19 +35,7 @@ st.set_page_config(
 
 # ==================== HEADER ====================
 
-st.markdown("""
-<style>
-    .main-header {
-        font-family: 'Inter', sans-serif;
-        font-size: 3rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, #22d3ee 0%, #818cf8 50%, #d946ef 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0.5rem;
-    }
-</style>
-""", unsafe_allow_html=True)
+inject_glassmorphism_css()
 
 st.markdown("<div class='main-header'>📈 Neural Engine Analysis</div>", unsafe_allow_html=True)
 st.markdown("""
@@ -146,7 +135,7 @@ if not predictions_df.empty:
     # Create chart
     if not filtered_preds.empty:
         chart = create_prediction_chart(filtered_preds, asset_name)
-        st.plotly_chart(chart, use_container_width=True)
+        st.plotly_chart(chart, width='stretch')
     else:
         st.info("No data in selected date range")
     
@@ -160,7 +149,7 @@ if not predictions_df.empty:
     
     with col1:
         error_chart = create_error_distribution(filtered_preds)
-        st.plotly_chart(error_chart, use_container_width=True)
+        st.plotly_chart(error_chart, width='stretch')
     
     with col2:
         st.markdown("""
@@ -194,11 +183,11 @@ if not predictions_df.empty:
             'Actual_Return': '{:.4f}',
             'Predicted_Return': '{:.4f}',
             'Prediction_Error': '{:.4f}'
-        }).applymap(
+        }).map(
             lambda val: 'background-color: #48BB78; color: white' if val == True else 'background-color: #FC8181; color: white',
             subset=['Correct_Prediction']
         ),
-        use_container_width=True,
+        width='stretch',
         hide_index=True
     )
     
@@ -228,7 +217,7 @@ if not relationships_df.empty:
             'Granger_Score': '{:.4f}',
             'Lag_Days': '{:.0f}'
         }).background_gradient(subset=['Granger_Score'], cmap='YlGn'),
-        use_container_width=True,
+        width='stretch',
         hide_index=True
     )
     
