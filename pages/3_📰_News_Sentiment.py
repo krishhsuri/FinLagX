@@ -115,7 +115,7 @@ else:
             hole=0.4
         )
         fig_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#cbd5e1'))
-        st.plotly_chart(fig_pie, use_container_width=True)
+        st.plotly_chart(fig_pie)
         
     with c2:
         st.subheader("Sentiment Breakdown by Source")
@@ -136,7 +136,7 @@ else:
             }
         ).update_yaxes(categoryorder="total ascending")
         fig_bar.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#cbd5e1'))
-        st.plotly_chart(fig_bar, use_container_width=True)
+        st.plotly_chart(fig_bar)
         
     st.markdown("---")
     
@@ -177,5 +177,5 @@ else:
         {"Score": "{:.4f}", "Confidence": "{:.4f}", "Timestamp": lambda t: t.strftime("%Y-%m-%d %H:%M")}
     )
     
-    st.dataframe(styled_df, use_container_width=True, height=600)
+    st.dataframe(styled_df, height=600)
     
