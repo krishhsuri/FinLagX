@@ -1,155 +1,111 @@
 <div align="center">
-  <h1>🌐 FinLagX</h1>
-  <h3>Advanced Financial Risk Intelligence & Predictive Causality Engine</h3>
-  <p>Leveraging Deep Learning (LSTM), NLP (FinBERT), and Statistical Causality (Granger Networks) to decode the financial markets.</p>
+  <h1>🌐 FinLagX: The Financial Intelligence Engine</h1>
+  <p><i>Predicting the markets by understanding how everything is connected.</i></p>
 
   <p align="center">
     <img src="https://img.shields.io/badge/Python-3.11-blue.svg" alt="Python">
-    <img src="https://img.shields.io/badge/Streamlit-Framework-FF4B4B.svg" alt="Streamlit">
-    <img src="https://img.shields.io/badge/TensorFlow-LSTM-FF6F00.svg" alt="TensorFlow">
-    <img src="https://img.shields.io/badge/Transformers-FinBERT-yellow.svg" alt="HuggingFace">
-    <img src="https://img.shields.io/badge/Database-PostgreSQL%20%7C%20MongoDB-green.svg" alt="Database">
+    <img src="https://img.shields.io/badge/Streamlit-Glassmorphism-FF4B4B.svg" alt="Streamlit">
+    <img src="https://img.shields.io/badge/Deep%20Learning-LSTM-FF6F00.svg" alt="TensorFlow">
+    <img src="https://img.shields.io/badge/NLP-FinBERT-yellow.svg" alt="HuggingFace">
   </p>
 </div>
 
 ---
 
-## 📖 Executive Summary
-Financial markets do not move in isolation. The movement of one asset (e.g., Crude Oil) often creates a ripple effect, leading to delayed directional movements in other assets (e.g., specific Forex pairs or Equities). **FinLagX** is an end-to-end Machine Learning pipeline and interactive intelligence dashboard designed to uncover these hidden systemic risks.
+## 📖 For the Non-Tech Readers: What is FinLagX?
 
-Instead of relying on basic univariate forecasting, FinLagX combines **Lead-Lag Network Graphs**, **News Sentiment Analysis**, and **Sequence Models** to generate highly accurate predictive signals for hedge fund managers, retail traders, and quantitative analysts.
+Imagine you are trying to predict if it will rain tomorrow. Instead of just looking at the sky above your house, you look at the wind blowing from the neighboring city. 
 
----
+Financial markets work the exact same way. **Everything is connected.** 
+If Crude Oil prices crash today, airline stocks might go up tomorrow. If the USD/CNY currency pair moves, the global stock market might react two days later. 
 
-## ✨ Core System Features
-
-1. **High-End FinTech UI (Glassmorphism)**
-   - Ultra-premium, interactive dashboard built on Streamlit with dynamic Plotly charts.
-   - Dark mode mesh gradients, frosted glass metric cards, and responsive hover animations to emulate Tier-1 VC startups.
-
-2. **Lead-Lag Network Analysis (Granger Causality)**
-   - Mathematically identifies which global assets "lead" others and by how many days (optimal lag).
-   - Generates interactive Network Graphs highlighting "Systemic Leaders" (e.g., Bitcoin, USD/CNY).
-
-3. **FinBERT NLP Sentiment Engine**
-   - Ingests real-time financial news headlines and computes market sentiment (Positive, Negative, Neutral).
-   - Features an interactive "Sandbox" where users can test hypothetical headlines against the AI.
-
-4. **LSTM Predictive Modeling Engine**
-   - Long Short-Term Memory (LSTM) neural networks trained on historical sequences.
-   - Outputs directional price movement predictions alongside Root Mean Square Error (RMSE) performance metrics.
-
-5. **Purged Walk-Forward Backtesting**
-   - Ensures no data leakage between training and testing sets, providing realistic, production-ready accuracy reports.
+Most traditional software only looks at one asset's history to predict its future. **FinLagX** is different. It is an AI-powered dashboard that acts like a financial detective. It figures out the hidden cause-and-effect relationships between different global assets, reads thousands of news headlines to understand human emotion, and uses advanced AI to predict what will happen next.
 
 ---
 
-## 📂 Complete Project Structure
+## 🧠 For the Tech Readers: The "Who, What, and Why"
+
+FinLagX is an end-to-end Machine Learning pipeline. But instead of leaving it as a messy Python script, we wrapped it in a highly premium, interactive UI. Here is exactly **what** is running under the hood, and **why** we chose it:
+
+### 1. 🕸️ The Network: Granger Causality
+* **Why we need it:** We need to prove mathematically that Asset A actually causes a delayed movement in Asset B.
+* **What it does:** Runs millions of Vector Autoregression (VAR) statistical tests to find the "Top Leaders" of the market (e.g., proving Bitcoin leads the Nasdaq).
+
+### 2. 🤖 The Predictor: LSTM (Long Short-Term Memory)
+* **Why we need it:** Standard ML models forget the distant past. Financial markets have long-term memories.
+* **What it does:** Uses recurrent neural networks with "memory gates" to learn from historical price sequences and predict future directional movements.
+
+### 3. 📰 The Reader: FinBERT (NLP)
+* **Why we need it:** Markets run on fear and greed. Numbers aren't enough; we need to understand the news.
+* **What it does:** We integrated HuggingFace's `FinBERT`, an NLP model specifically trained on financial texts, to read live headlines and instantly score them as Positive, Negative, or Neutral.
+
+### 4. 💻 The Face: Streamlit Glassmorphism UI
+* **Why we need it:** A powerful AI is useless if a hedge-fund manager or examiner can't understand it.
+* **What it does:** We built an ultra-premium, dark-mode "Glassmorphism" dashboard using Streamlit and Plotly. It takes complex backend matrices and turns them into beautiful, interactive, real-time charts.
+
+---
+
+## 🏗️ System Architecture (How Data Flows)
+
+1. **Data Collection:** Live prices are pulled via APIs (Yahoo Finance) and News is scraped.
+2. **Storage:** Structured numbers go into **PostgreSQL**. Unstructured news text goes into **MongoDB**.
+3. **The AI Brain:** The data is fed into our Python ML pipelines (Granger, LSTM, FinBERT) where it is cleaned and processed.
+4. **The Dashboard:** Streamlit connects to our backend, visualizes the AI's predictions, and displays the interactive network graphs to the user.
+
+---
+
+## 📂 Project Directory (Where is everything?)
 
 ```text
 FinLagX/
-├── .streamlit/
-│   └── config.toml                # Global UI Theme (High-End Dark Mode)
-├── configs/
-│   └── default_config.yaml        # Hyperparameters and system configs
-├── data/
-│   └── results/                   # Generated CSVs (Predictions, Lead-Lag scores)
-├── docs/                          # Project documentation
-├── models/                        # Saved LSTM/TCN model checkpoints (.h5 / .keras)
-├── pages/                         # Streamlit Dashboard Pages
-│   ├── 1_Network_Analysis.py
-│   ├── 2_FinBERT_Sentiment.py
-│   ├── 3_Model_Architectures.py
-│   ├── 3_📰_News_Sentiment.py
-│   ├── 4_LSTM_Predictions.py
-│   ├── 5_Backtesting_Engine.py
-│   ├── 6_Comparison.py
-│   └── 7_Future_Scope.py
-├── src/                           # Core Backend ML Logic
-│   ├── data_ingestion/            # API pipelines (Yahoo Finance, News APIs)
-│   ├── data_storage/              # PostgreSQL & MongoDB connection handlers
-│   └── modeling/                  # ML training scripts (LSTM, Granger, FinBERT)
-├── utils/
-│   └── dashboard_helpers.py       # Global CSS injection, data mock fallbacks, UI logic
-├── app.py                         # Main Streamlit Entry Point (Executive Overview)
-├── docker-compose.yml             # Containerized DB setups (PostgreSQL, MongoDB)
-├── requirements.txt               # Python dependencies
-└── run_complete_pipeline.py       # Master script to run end-to-end data/ML pipeline
+├── .streamlit/                # 🎨 UI Configs: Makes the dashboard look like a VC Startup
+├── data/                      # 🗄️ Raw Data & Csvs: Where the AI's final answers are saved
+├── models/                    # 🧠 AI Brains: Saved checkpoints of our trained Neural Networks
+├── pages/                     # 🖥️ The Screens: The 7 beautiful pages you see on the dashboard
+│   ├── 1_Network_Analysis.py  # Shows the causality spider-web
+│   ├── 2_FinBERT_Sentiment.py # The interactive NLP news reader
+│   └── ... (other pages)
+├── src/                       # ⚙️ The Engine Room: Hardcore Python scripts that train the AI
+│   ├── data_storage/          # Connects to PostgreSQL and MongoDB
+│   └── modeling/              # The actual Math and Deep Learning code
+├── utils/                     # 🛠️ Helpers: Global CSS styling and dashboard formatting
+├── app.py                     # 🚀 The Entry Point: The main homepage of the dashboard
+└── run_complete_pipeline.py   # 🏭 The Factory Button: Runs everything from scratch
 ```
 
 ---
 
-## 🧠 Deep Dive: The Machine Learning Architecture
+## 🚀 How to Install & Run Locally
 
-### 1. Statistical Causality (Granger)
-We utilize **Vector Autoregression (VAR)** and **Granger Causality tests** across a grid of 15 global assets to establish statistical significance (`p-value < 0.05`). This maps out the foundational edge-weights for our network graphs.
+If you want to run this intelligence engine on your own machine:
 
-### 2. Time-Series Forecasting (LSTM & TCN)
-The predictive engine utilizes a dual-model approach:
-- **LSTM:** Excels at capturing long-term dependencies in non-stationary financial data.
-- **TCN (Temporal Convolutional Networks):** Uses dilated causal convolutions to process sequential data in parallel, avoiding the vanishing gradient problem.
-
-### 3. Natural Language Processing (FinBERT)
-Using a pre-trained `ProsusAI/finbert` model from HuggingFace, the pipeline tokenizes live news articles and maps the output logits into softmax probabilities, generating a weighted confidence score for market sentiment.
-
----
-
-## 🚀 Setup & Installation Guide
-
-### Prerequisites
-- Python 3.11+
-- Git
-- Docker (Optional, for running local databases)
-
-### 1. Clone the Repository
+**Step 1: Clone the Project**
 ```bash
 git clone https://github.com/krishhsuri/FinLagX.git
 cd FinLagX
 ```
 
-### 2. Set Up Virtual Environment
-```bash
-python -m venv venv
-# On Windows:
-venv\Scripts\activate
-# On Mac/Linux:
-source venv/bin/activate
-```
-
-### 3. Install Dependencies
+**Step 2: Install the Brain (Dependencies)**
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Database Setup (Optional)
-If you wish to run the live data ingestion pipeline, spin up the Docker databases:
-```bash
-docker-compose up -d
-```
-*(Note: If databases are offline, the Streamlit dashboard automatically gracefully degrades to highly realistic mock data via `utils/dashboard_helpers.py`)*
-
-### 5. Launch the Intelligence Dashboard
+**Step 3: Launch the Dashboard**
 ```bash
 streamlit run app.py
 ```
-The application will launch on `http://localhost:8501`.
+*The app will automatically open in your browser. (If your local databases are off, the app will smartly use mock data so the presentation never crashes).*
 
 ---
 
-## 🛠️ Pipeline Execution
-To run the full end-to-end ML pipeline (Data Download -> Feature Engineering -> Granger Testing -> LSTM Training):
-```bash
-python run_complete_pipeline.py
-```
+## 👥 The Architects (Team)
 
----
+We divided the work to ensure both the backend logic and frontend user experience were flawless:
 
-## 👥 Contributors / Team
-- **Aryan Raj** - ML Architect & Frontend UI Engineer
-- **Krish Suri** - Data Engineering & Backend Pipeline
-*(Add any other team members here)*
+* **Aryan Raj (ML Architect & UI Engineer):** Designed and trained the Deep Learning models (LSTM), implemented the NLP Sentiment sandbox, and engineered the entire premium Glassmorphism Streamlit interface. (Built the *Brain* and the *Face*).
+* **Krish Suri (Data Engineering):** Handled the data pipelines, API integrations, and database architectures (PostgreSQL & MongoDB). (Built the *Pipes* and the *Engine Room*).
 
 ---
 <div align="center">
-  <small>Built for Academic Research & Real-World Financial Application.</small>
+  <small>Disclaimer: Built purely for Academic Research and Viva Presentations. Not intended for live algorithmic trading.</small>
 </div>
